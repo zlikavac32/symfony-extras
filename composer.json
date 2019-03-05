@@ -1,0 +1,49 @@
+{
+    "name": "zlikavac32/symfony-extras",
+    "description": "Various extra functionality for Symfony",
+    "keywords": ["compiler-pass", "dic", "symfony", "console"],
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Marijan Šuflaj",
+            "email": "msufflaj32@gmail.com"
+        }
+    ],
+    "autoload": {
+        "files": [
+            "src/asserts.php",
+            "src/functions.php"
+        ],
+        "psr-4": {
+            "Zlikavac32\\SymfonyExtras\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Zlikavac32\\SymfonyExtras\\Tests\\": "tests/",
+            "Zlikavac32\\SymfonyExtras\\TestHelper\\": "src-test/"
+        }
+    },
+    "suggest": {
+        "symfony/console": "To use console runnable",
+        "symfony/dependency-injection": "To use compiler passes",
+        "ext-ds": "To use this library at all",
+        "php-ds/php-ds": "If you can't install ext-ds",
+        "symfony/config": "To use console runnable",
+        "symfony/event-dispatcher": "To use dynamic event dispatcher"
+    },
+    "require": {
+        "php": "^7.1"
+    },
+    "require-dev": {
+        "symfony/console": "^4.2",
+        "symfony/dependency-injection": "^4.2",
+        "php-ds/php-ds": "^1.2",
+        "symfony/config": "^4.2",
+        "symfony/event-dispatcher": "^4.2",
+        "phpunit/phpunit": "^7.5.6",
+        "symfony/var-dumper": "^4.2"
+    },
+    "minimum-stability": "stable"
+}
