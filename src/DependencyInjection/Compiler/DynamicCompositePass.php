@@ -70,8 +70,8 @@ class DynamicCompositePass implements CompilerPassInterface
                 $serviceId,
                 $servicesToInject,
                 $method,
-                $argument,
-                );
+                $argument
+            );
         }
     }
 
