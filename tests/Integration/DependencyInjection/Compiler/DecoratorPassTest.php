@@ -196,6 +196,24 @@ class DecoratorPassTest extends TestCase
     /**
      * @test
      */
+    public function decorator_is_ignored_when_no_reference_exists_to_it(): void
+    {
+        $container = new ContainerBuilder();
+
+        $container->register('foo')
+            ->setAbstract(true)
+            ->addTag('decorator', [
+                'tag' => 'decorator-1',
+            ]);
+
+        $this->compilerPass->process($container);
+
+        $this->assertTrue(true);
+    }
+
+    /**
+     * @test
+     */
     public function one_decorator_can_be_applied_to_multiple_services(): void
     {
         $container = new ContainerBuilder();
