@@ -34,17 +34,13 @@ class DecoratorPass implements CompilerPassInterface
      */
     private $tag;
     /**
-     * @var Map|string[]
-     */
-    private $decorators;
-    /**
      * @var Map|Set[]|string[][]
      */
     private $tagToServicesMap;
     /**
-     * @var Map|Set[]|string[][]
+     * @var Map|DecoratorDefinition[]
      */
-    private $processedTagsAndServices;
+    private $decoratorDefinitions;
 
     public function __construct(string $tag = 'decorator')
     {
@@ -64,22 +60,20 @@ class DecoratorPass implements CompilerPassInterface
 
             // used to share state for multiple passes and will be removed in compile stage
             // since nobody references it
-            $processedServicesMapKey = self::class . '.processed_services';
+            $decoratorDefinitions = self::class . '.decorator_definitions';
 
-            if (!$container->has($processedServicesMapKey)) {
-                $container->set($processedServicesMapKey, new Map());
+            if (!$container->has($decoratorDefinitions)) {
+                $container->set($decoratorDefinitions, new Map());
             }
 
-            $this->decorators = new Map();
-            $this->processedTagsAndServices = $container->get($processedServicesMapKey);
+            $this->decoratorDefinitions = $container->get($decoratorDefinitions);
 
             $this->buildMapOfDecorators($container);
 
             $this->decorateServices($container);
         } finally {
-            $this->decorators = null;
             $this->tagToServicesMap = null;
-            $this->processedTagsAndServices = null;
+            $this->decoratorDefinitions = null;
         }
     }
 
@@ -115,16 +109,19 @@ class DecoratorPass implements CompilerPassInterface
 
                 assertValueIsOfType($argument, new Set(['string', 'integer']), 'argument', $serviceId);
 
-                if ($this->decorators->hasKey($tagName)) {
-                    throw new LogicException(
-                        sprintf('Tag %s already provided by %s', $tagName, $this->decorators->get($tagName)[0])
-                    );
+                if (!$this->decoratorDefinitions->hasKey($tagName)) {
+                    $this->decoratorDefinitions->put($tagName, new DecoratorDefinition($serviceId, $argument));
+
+                    continue;
                 }
 
-                $this->decorators->put($tagName, [$serviceId, $argument]);
+                $decoratorDefinition = $this->decoratorDefinitions->get($tagName);
+                assert($decoratorDefinition instanceof DecoratorDefinition);
 
-                if (!$this->processedTagsAndServices->hasKey($tagName)) {
-                    $this->processedTagsAndServices->put($tagName, new Set());
+                if ($decoratorDefinition->serviceId() !== $serviceId) {
+                    throw new LogicException(
+                        sprintf('Tag %s already provided by %s', $tagName, $decoratorDefinition->serviceId())
+                    );
                 }
             }
         }
@@ -132,13 +129,16 @@ class DecoratorPass implements CompilerPassInterface
 
     private function decorateServices(ContainerBuilder $container): void
     {
-        foreach ($this->decorators->keys() as $tagName) {
+        foreach ($this->decoratorDefinitions->keys() as $tagName) {
             if (!$this->tagToServicesMap->hasKey($tagName)) {
                 continue ;
             }
 
+            $decoratorDefinition = $this->decoratorDefinitions->get($tagName);
+            assert($decoratorDefinition instanceof DecoratorDefinition);
+
             foreach ($this->tagToServicesMap->get($tagName)
-                         ->diff($this->processedTagsAndServices->get($tagName)) as $serviceToProcess) {
+                         ->diff($decoratorDefinition->processedServices()) as $serviceToProcess) {
 
                 $this->decorateService(
                     $container,
@@ -152,31 +152,31 @@ class DecoratorPass implements CompilerPassInterface
     private function decorateService(ContainerBuilder $container, Definition $definition, string $serviceId): void
     {
         foreach ($definition->getTags() as $serviceTagName => $tags) {
-            if (!$this->decorators->hasKey($serviceTagName)) {
+            if (!$this->decoratorDefinitions->hasKey($serviceTagName)) {
                 continue;
             }
 
             assertOnlyOneTagPerService($tags, $serviceTagName, $serviceId);
 
-            if ($this->processedTagsAndServices->get($serviceTagName)->contains($serviceId)) {
+            $decoratorDefinition = $this->decoratorDefinitions->get($serviceTagName);
+            assert($decoratorDefinition instanceof DecoratorDefinition);
+
+            if ($decoratorDefinition->processedServices()->contains($serviceId)) {
                 continue;
             }
 
             $tag = $tags[0];
 
-            [$decoratorServiceId, $argument] = $this->decorators->get($serviceTagName);
-
             $this->decorateServiceForTag(
                 $container,
                 $serviceTagName,
-                $decoratorServiceId,
-                $argument,
+                $decoratorDefinition->serviceId(),
+                $decoratorDefinition->argument(),
                 $serviceId,
                 $tag
             );
 
-            $this->processedTagsAndServices->get($serviceTagName)
-                ->add($serviceId);
+            $decoratorDefinition->processedServices()->add($serviceId);
         }
     }
 
@@ -215,5 +215,43 @@ class DecoratorPass implements CompilerPassInterface
         }
 
         $container->setDefinition($decoratingServiceId, $decoratingService);
+    }
+}
+
+/**
+ * @internal
+ */
+class DecoratorDefinition {
+
+    /**
+     * @var string
+     */
+    private $serviceId;
+    private $argument;
+    /**
+     * @var Set
+     */
+    private $processedServices;
+
+    public function __construct(string $serviceId, $argument)
+    {
+        $this->serviceId = $serviceId;
+        $this->argument = $argument;
+        $this->processedServices = new Set();
+    }
+
+    public function serviceId(): string
+    {
+        return $this->serviceId;
+    }
+
+    public function argument()
+    {
+        return $this->argument;
+    }
+
+    public function processedServices(): Set
+    {
+        return $this->processedServices;
     }
 }
