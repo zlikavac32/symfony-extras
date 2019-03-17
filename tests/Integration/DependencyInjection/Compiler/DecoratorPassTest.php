@@ -319,4 +319,48 @@ class DecoratorPassTest extends TestCase
             new DecoratorExistsFor('bar', 'bar.decorator-1', 'foo', '$foo', 0)
         );
     }
+
+    /**
+     * @test
+     */
+    public function decoration_works_in_multiple_passes(): void
+    {
+        $container = new ContainerBuilder();
+
+        $container->register('foo')
+            ->setAbstract(true)
+            ->addTag('decorator', [
+                'tag'      => 'decorator-1',
+                'argument' => '$foo',
+            ]);
+        $container->register('bar')
+            ->addTag('decorator-1');
+
+        $this->compilerPass->process($container);
+
+        self::assertThat(
+            $container,
+            new DecoratorExistsFor('bar', 'bar.decorator-1', 'foo', '$foo', 0)
+        );
+
+        $currentFooDecoratorDefinition = $container->getDefinition('bar.decorator-1');
+
+        $container->register('baz')
+            ->setAbstract(true)
+            ->addTag('decorator', [
+                'tag'      => 'decorator-2',
+                'argument' => '$baz',
+            ]);
+        $container->getDefinition('bar')
+            ->addTag('decorator-2');
+
+        $this->compilerPass->process($container);
+
+        self::assertSame($currentFooDecoratorDefinition, $container->getDefinition('bar.decorator-1'));
+
+        self::assertThat(
+            $container,
+            new DecoratorExistsFor('bar', 'bar.decorator-2', 'baz', '$baz', 0)
+        );
+    }
 }

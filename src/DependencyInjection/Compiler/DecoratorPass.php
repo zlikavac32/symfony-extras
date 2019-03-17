@@ -42,9 +42,9 @@ class DecoratorPass implements CompilerPassInterface
      */
     private $tagToServicesMap;
     /**
-     * @var Set|string[]
+     * @var Map|Set[]|string[][]
      */
-    private $processedServices;
+    private $processedTagsAndServices;
 
     public function __construct(string $tag = 'decorator')
     {
@@ -62,8 +62,16 @@ class DecoratorPass implements CompilerPassInterface
                 return;
             }
 
+            // used to share state for multiple passes and will be removed in compile stage
+            // since nobody references it
+            $processedServicesMapKey = self::class . '.processed_services';
+
+            if (!$container->has($processedServicesMapKey)) {
+                $container->set($processedServicesMapKey, new Map());
+            }
+
             $this->decorators = new Map();
-            $this->processedServices = new Set();
+            $this->processedTagsAndServices = $container->get($processedServicesMapKey);
 
             $this->buildMapOfDecorators($container);
 
@@ -71,7 +79,7 @@ class DecoratorPass implements CompilerPassInterface
         } finally {
             $this->decorators = null;
             $this->tagToServicesMap = null;
-            $this->processedServices = null;
+            $this->processedTagsAndServices = null;
         }
     }
 
@@ -114,6 +122,10 @@ class DecoratorPass implements CompilerPassInterface
                 }
 
                 $this->decorators->put($tagName, [$serviceId, $argument]);
+
+                if (!$this->processedTagsAndServices->hasKey($tagName)) {
+                    $this->processedTagsAndServices->put($tagName, new Set());
+                }
             }
         }
     }
@@ -126,15 +138,13 @@ class DecoratorPass implements CompilerPassInterface
             }
 
             foreach ($this->tagToServicesMap->get($tagName)
-                         ->diff($this->processedServices) as $serviceToProcess) {
+                         ->diff($this->processedTagsAndServices->get($tagName)) as $serviceToProcess) {
 
                 $this->decorateService(
                     $container,
                     $container->findDefinition($serviceToProcess),
                     $serviceToProcess
                 );
-
-                $this->processedServices->add($serviceToProcess);
             }
         }
     }
@@ -148,6 +158,10 @@ class DecoratorPass implements CompilerPassInterface
 
             assertOnlyOneTagPerService($tags, $serviceTagName, $serviceId);
 
+            if ($this->processedTagsAndServices->get($serviceTagName)->contains($serviceId)) {
+                continue;
+            }
+
             $tag = $tags[0];
 
             [$decoratorServiceId, $argument] = $this->decorators->get($serviceTagName);
@@ -160,6 +174,9 @@ class DecoratorPass implements CompilerPassInterface
                 $serviceId,
                 $tag
             );
+
+            $this->processedTagsAndServices->get($serviceTagName)
+                ->add($serviceId);
         }
     }
 
