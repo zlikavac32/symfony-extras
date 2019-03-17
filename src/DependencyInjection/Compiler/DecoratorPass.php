@@ -120,7 +120,7 @@ class DecoratorPass implements CompilerPassInterface
 
                 if ($decoratorDefinition->serviceId() !== $serviceId) {
                     throw new LogicException(
-                        sprintf('Tag %s already provided by %s', $tagName, $decoratorDefinition->serviceId())
+                        sprintf('Tag %s already provided by %s (issue found on service %s)', $tagName, $decoratorDefinition->serviceId(), $serviceId)
                     );
                 }
             }

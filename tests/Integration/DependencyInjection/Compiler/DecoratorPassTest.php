@@ -157,7 +157,7 @@ class DecoratorPassTest extends TestCase
             ]);
 
         $this->expectException(LogicException::class);
-        $this->expectExceptionMessage('Tag decorator-1 already provided by foo');
+        $this->expectExceptionMessage('Tag decorator-1 already provided by foo (issue found on service baz)');
 
         $this->compilerPass->process($container);
     }
