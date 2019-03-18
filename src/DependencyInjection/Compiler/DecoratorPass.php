@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Zlikavac32\SymfonyExtras\DependencyInjection\Compiler;
 
 use Ds\Map;
+use Ds\Sequence;
 use Ds\Set;
+use Ds\Vector;
 use LogicException;
 use Symfony\Component\DependencyInjection\ChildDefinition;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
@@ -150,21 +152,44 @@ class DecoratorPass implements CompilerPassInterface
 
     private function decorateService(ContainerBuilder $container, Definition $definition, string $serviceId): void
     {
+        $serviceTags = new Vector();
+
         foreach ($definition->getTags() as $serviceTagName => $tags) {
-            if (!$this->decoratorDefinitions->hasKey($serviceTagName)) {
-                continue;
-            }
+            $serviceTags->push([$serviceTagName, $tags]);
+        }
 
-            assertOnlyOneTagPerService($tags, $serviceTagName, $serviceId);
+        $servicesToDecorate = $serviceTags
+            ->filter(function (array $tags): bool {
+                return $this->decoratorDefinitions->hasKey($tags[0]);
+            })
+            ->map(function (array $tags) use ($serviceId): array {
+                assertOnlyOneTagPerService($tags[1], $tags[0], $serviceId);
 
-            $decoratorDefinition = $this->decoratorDefinitions->get($serviceTagName);
+                return [$tags[0], $tags[1][0]];
+            })
+            ->map(function (array $tags): array {
+                return [$tags[0], $tags[1], $this->decoratorDefinitions->get($tags[0])];
+            });
+
+        $this->decorateServiceDefinition($container, $servicesToDecorate, $serviceId);
+    }
+
+    private function decorateServiceDefinition(
+        ContainerBuilder $container,
+        Sequence $servicesToDecorate,
+        string $serviceId
+    ): void {
+        foreach ($servicesToDecorate as [$serviceTagName, $tag, $decoratorDefinition]) {
             assert($decoratorDefinition instanceof DecoratorDefinition);
 
-            if ($decoratorDefinition->processedServices()->contains($serviceId)) {
+            if ($decoratorDefinition->processedServices()
+                ->contains($serviceId)) {
                 continue;
             }
 
-            $tag = $tags[0];
+            $decoratingPriority = $tag['priority'] ?? 0;
+
+            assertValueIsOfType($decoratingPriority, new Set(['integer']), 'priority', $serviceId);
 
             $this->decorateServiceForTag(
                 $container,
@@ -172,10 +197,12 @@ class DecoratorPass implements CompilerPassInterface
                 $decoratorDefinition->serviceId(),
                 $decoratorDefinition->argument(),
                 $serviceId,
+                $decoratingPriority,
                 $tag
             );
 
-            $decoratorDefinition->processedServices()->add($serviceId);
+            $decoratorDefinition->processedServices()
+                ->add($serviceId);
         }
     }
 
@@ -185,12 +212,9 @@ class DecoratorPass implements CompilerPassInterface
         string $templateServiceId,
         $argument,
         string $serviceId,
+        int $decoratingPriority,
         array $tag
     ): void {
-        $decoratingPriority = $tag['priority'] ?? 0;
-
-        assertValueIsOfType($decoratingPriority, new Set(['integer']), 'priority', $serviceId);
-
         $decoratingServiceId = sprintf('%s.%s', $serviceId, $tagName);
 
         $decoratingService = new ChildDefinition($templateServiceId);
