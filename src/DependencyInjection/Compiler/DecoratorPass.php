@@ -129,12 +129,11 @@ class DecoratorPass implements CompilerPassInterface
 
     private function decorateServices(ContainerBuilder $container): void
     {
-        foreach ($this->decoratorDefinitions->keys() as $tagName) {
-            if (!$this->tagToServicesMap->hasKey($tagName)) {
-                continue ;
-            }
+        $usedDecorators = $this->decoratorDefinitions->filter(function (string $tagName): bool {
+            return $this->tagToServicesMap->hasKey($tagName);
+        });
 
-            $decoratorDefinition = $this->decoratorDefinitions->get($tagName);
+        foreach ($usedDecorators as $tagName => $decoratorDefinition) {
             assert($decoratorDefinition instanceof DecoratorDefinition);
 
             foreach ($this->tagToServicesMap->get($tagName)
