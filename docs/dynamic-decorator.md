@@ -57,6 +57,35 @@ Multiple decorators can be applied and with different priorities. Priority respe
         - { name: decorator.domain_foo, priority: 32 }
 ```
 
+
+## Decorating arguments
+
+Sometimes it's useful to decorate certain argument without affecting referenced service. For example, we want to decorate certain service as immutable before injecting it.
+
+This is accomplished with `argument` attribute on the template decorator tag (not on the `decorator` tag itself).
+
+**Decorated arguments must be explicitly declared**. This is due to the fact that auto-wiring is done i na later stage.
+
+```yaml
+
+\Demo\FooDecorator:
+    abstract: true
+    tags:
+        - { name: decorator, tag: decorator.domain_foo }
+
+\Demo\ConcreteService: ~
+
+// ServiceThatRequiresImmutableConcreteService(FooDecorator(ConcreteService))
+// but \Demo\ConcreteService is still the same
+\Demo\ServiceThatRequiresImmutableConcreteService:
+    arguments:
+        - '@\Demo\ConcreteService'
+    tags:
+        - { decorator.domain_foo, argument: 0 }
+```
+
+Internally, for every argument, an alias is created onto which decorators are applied.
+
 ## Passing tags
 
 Sometimes decorating services have other dependencies that are different depending on the service that is being decorated. For example, certain decorator might log some data and which logger is used, depends on which service is being decorated.

@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use Symfony\Component\DependencyInjection\Compiler\ReplaceAliasByActualDefinitionPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\VarDumper\VarDumper;
 use Zlikavac32\SymfonyExtras\DependencyInjection\Compiler\DecoratorPass;
 
@@ -30,6 +32,26 @@ class ConcreteService implements Service
     public function run(): void
     {
         echo VarDumper::dump($this->name);
+    }
+}
+
+class WrappedService {
+
+    /**
+     * @var Service
+     */
+    private $service;
+
+    public function __construct(Service $service)
+    {
+        $this->service = $service;
+    }
+
+    public function doSomething(): void
+    {
+        echo VarDumper::dump(get_class($this));
+
+        $this->service->run();
     }
 }
 
@@ -124,12 +146,30 @@ $container->register('third_service', ConcreteService::class)
     ])
     ->addTag('decorator.service.baz');
 
+/**
+ * We can also decorate just some arguments in constructor. Method decoration is not yet supported
+ */
+$container->register('fourth_service', ConcreteService::class)
+    ->setPublic(true)
+    ->addArgument('Fourth');
+
+$container->register('wrapped_service', WrappedService::class)
+    ->setPublic(true)
+    ->addArgument(new Reference('fourth_service'))
+    ->addTag('decorator.service.foo', [
+        'argument' => 0
+    ])
+    ->addTag('decorator.service.baz', [
+        'argument' => 0
+    ]);
+
 $container->compile();
 
 $compositeServices = [
     'first_service',
     'second_service',
     'third_service',
+    'fourth_service',
 ];
 
 foreach ($compositeServices as $service) {
@@ -138,6 +178,14 @@ foreach ($compositeServices as $service) {
         ->run();
     echo "\n";
 }
+
+$service = 'wrapped_service';
+
+echo VarDumper::dump($service);
+$container->get($service)
+    ->doSomething();
+
+echo "\n";
 
 /*
 Output:
@@ -158,4 +206,13 @@ Output:
 "FooDecorator"
 "BarDecorator"
 "Third"
+
+"fourth_service"
+"Fourth"
+
+"wrapped_service"
+"WrappedService"
+"BazDecorator"
+"FooDecorator"
+"Fourth"
  */
