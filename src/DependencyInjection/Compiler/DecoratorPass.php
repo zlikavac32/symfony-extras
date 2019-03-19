@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Zlikavac32\SymfonyExtras\DependencyInjection\Compiler;
 
+use Closure;
 use Ds\Hashable;
 use Ds\Map;
 use Ds\Sequence;
@@ -183,19 +184,47 @@ class DecoratorPass implements CompilerPassInterface
             ->filter(function (array $tags): bool {
                 return $this->decoratorDefinitions->hasKey($tags[0]);
             })
-            ->map(function (array $tags) use ($serviceId): TagReference {
-                assertOnlyOneTagPerService($tags[1], $tags[0], $serviceId);
+            ->map(function (array $tags) use ($serviceId): Sequence {
+                $collectedTagReferences = new Vector();
 
-                $tag = $tags[1][0];
+                $processedTagReferences = new Set();
 
-                $decoratingPriority = $tag['priority'] ?? 0;
+                foreach ($tags[1] as $tag) {
+                    $decoratingPriority = $tag['priority'] ?? 0;
 
-                assertValueIsOfType($decoratingPriority, new Set(['integer']), 'priority', $serviceId);
+                    assertValueIsOfType($decoratingPriority, new Set(['integer']), 'priority', $serviceId);
 
-                unset($tag['priority']);
+                    unset($tag['priority']);
 
-                return new TagReference($tags[0], $serviceId, $decoratingPriority, $tag);
+                    $argument = null;
+
+                    if (isset($tag['argument'])) {
+                        $argument = $tag['argument'];
+
+                        assertValueIsOfType($argument, new Set(['integer', 'string']), 'argument', $serviceId);
+
+                        unset($tag['argument']);
+                    }
+
+                    $tagReference = new TagReference($tags[0], $serviceId, $decoratingPriority, $argument, $tag);
+
+                    if ($processedTagReferences->contains($tagReference)) {
+                        throw new LogicException(
+                            sprintf('Only one tag %s allowed on service %s', $tagReference->tagName(), $tagReference->serviceId()) .
+                            ($tagReference->hasArgument() ? sprintf(' and argument %s', $tagReference->argument()) : '')
+                        );
+                    }
+
+                    $collectedTagReferences->push($tagReference);
+                    $processedTagReferences->add($tagReference);
+                }
+
+
+                return $collectedTagReferences;
             })
+            ->reduce(function (Vector $collected, Vector $tagReferences): Sequence {
+                return $collected->merge($tagReferences);
+            }, new Vector())
             ->filter(function (TagReference $tagReference): bool {
                 return !$this->processedTags->contains($tagReference);
             });
@@ -203,24 +232,71 @@ class DecoratorPass implements CompilerPassInterface
 
     private function decorateServices(ContainerBuilder $container, Map $tagsToProcess): void
     {
-        foreach ($tagsToProcess as $serviceId => $tagReferences) {
+        foreach ($tagsToProcess as $tagReferences) {
+            assert($tagReferences instanceof Sequence);
+
             foreach ($tagReferences as $tagReference) {
                 assert($tagReference instanceof TagReference);
 
-                $this->decorateServiceForTag($container, $this->decoratorDefinitions->get($tagReference->tagName()),
-                    $tagReference);
+                $serviceToDecorate = $tagReference->serviceId();
+
+                if ($tagReference->hasArgument()) {
+                    $serviceToDecorate = $this->resolveAliasForServiceArgument($container, $tagReference);
+                }
+
+                $this->decorateServiceForTag(
+                    $container,
+                    $serviceToDecorate,
+                    $this->decoratorDefinitions->get($tagReference->tagName()),
+                    $tagReference
+                );
 
                 $this->processedTags->add($tagReference);
             }
         }
     }
 
+    private function resolveAliasForServiceArgument(ContainerBuilder $container, TagReference $tagReference): string
+    {
+        $aliasServiceId = $tagReference->serviceId() . '.' . sha1((string) $tagReference->argument());
+
+        if ($container->hasAlias($aliasServiceId)) {
+            return $aliasServiceId;
+        }
+
+        $serviceDefinition = $container->findDefinition($tagReference->serviceId());
+
+        $arguments = $serviceDefinition->getArguments();
+
+        $decoratedArgument = $tagReference->argument();
+
+        if (
+            !isset($arguments[$decoratedArgument])
+            ||
+            !$arguments[$decoratedArgument] instanceof Reference
+        ) {
+            throw new LogicException(
+                sprintf(
+                    'Argument %s must be explicitly defined to reference some service (issue on service %s)',
+                    $decoratedArgument,
+                    $tagReference->serviceId()
+                )
+            );
+        }
+
+        $container->setAlias($aliasServiceId, (string)$arguments[$decoratedArgument]);
+        $serviceDefinition->setArgument($decoratedArgument, new Reference($aliasServiceId));
+
+        return $aliasServiceId;
+    }
+
     private function decorateServiceForTag(
         ContainerBuilder $container,
+        string $decoratedServiceId,
         DecoratorDefinition $decoratorDefinition,
         TagReference $tagReference
     ): void {
-        $decoratingServiceId = sprintf('%s.%s', $tagReference->serviceId(), $tagReference->tagName());
+        $decoratingServiceId = sprintf('%s.%s', $decoratedServiceId, $tagReference->tagName());
 
         $decoratingService = new ChildDefinition($decoratorDefinition->serviceId());
 
@@ -231,7 +307,7 @@ class DecoratorPass implements CompilerPassInterface
 
         $decoratingService
             ->setArgument($decoratorDefinition->argument(), new Reference(sprintf('%s.inner', $decoratingServiceId)))
-            ->setDecoratedService($tagReference->serviceId(), null, $tagReference->priority())
+            ->setDecoratedService($decoratedServiceId, null, $tagReference->priority())
             ->setTags(
                 $newTags
             );
@@ -272,14 +348,18 @@ class TagReference implements Hashable
      * @var array
      */
     private $remainingProperties;
+    private $argument;
 
-    public function __construct(string $tagName, string $serviceId, int $priority, array $remainingProperties)
+    public function __construct(string $tagName, string $serviceId, int $priority, $argument, array $remainingProperties)
     {
+        assert(is_null($argument) || is_int($argument) || is_string($argument));
+
         $this->tagName = $tagName;
         $this->serviceId = $serviceId;
         $this->priority = $priority;
-        $this->hash = sha1($tagName . ':' . $serviceId);
+        $this->hash = sha1($tagName . ':' . $serviceId . ':' . $argument);
         $this->remainingProperties = $remainingProperties;
+        $this->argument = $argument;
     }
 
     public function remainingProperties(): array
@@ -303,6 +383,23 @@ class TagReference implements Hashable
     }
 
     /**
+     * @return int|string
+     */
+    public function argument()
+    {
+        if (null === $this->argument) {
+            throw new LogicException('Argument does not exist for this reference. Forgot to call hasArgument()?');
+        }
+
+        return $this->argument;
+    }
+
+    public function hasArgument(): bool
+    {
+        return null !== $this->argument;
+    }
+
+    /**
      * @inheritdoc
      */
     function hash(): string
@@ -321,7 +418,9 @@ class TagReference implements Hashable
 
         return $obj->tagName === $this->tagName
             &&
-            $obj->serviceId === $this->serviceId;
+            $obj->serviceId === $this->serviceId
+            &&
+            $obj->argument === $this->argument;
     }
 }
 

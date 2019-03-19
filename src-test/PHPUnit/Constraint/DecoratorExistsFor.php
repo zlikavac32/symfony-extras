@@ -36,7 +36,7 @@ class DecoratorExistsFor extends Constraint
 
     public function __construct(
         string $serviceId,
-        string $decoratorServiceId,
+        string $decoratorTag,
         string $decoratorTemplateId,
         $decoratorArgument,
         int $priority
@@ -44,7 +44,7 @@ class DecoratorExistsFor extends Constraint
         parent::__construct();
 
         $this->serviceId = $serviceId;
-        $this->decoratorServiceId = $decoratorServiceId;
+        $this->decoratorServiceId = $serviceId . '.' . $decoratorTag;
         $this->decoratorArgument = $decoratorArgument;
         $this->priority = $priority;
         $this->decoratorTemplateId = $decoratorTemplateId;
@@ -74,9 +74,9 @@ class DecoratorExistsFor extends Constraint
 
         if ($decoratorDefinition->getParent() !== $this->decoratorTemplateId) {
             $this->message = sprintf(
-                '%s is not template for %s (actually for %s)',
-                $this->decoratorServiceId,
+                '%s decorator service does not have %s as parent (has %s)',
                 $this->decoratorTemplateId,
+                $this->decoratorServiceId,
                 $decoratorDefinition->getParent()
             );
 

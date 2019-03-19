@@ -7,8 +7,10 @@ namespace Zlikavac32\SymfonyExtras\Tests\Integration\DependencyInjection\Compile
 use LogicException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\Reference;
 use Zlikavac32\SymfonyExtras\DependencyInjection\Compiler\DecoratorPass;
 use Zlikavac32\SymfonyExtras\TestHelper\PHPUnit\Constraint\DecoratorExistsFor;
+use Zlikavac32\SymfonyExtras\TestHelper\PHPUnit\Constraint\DecoratorExistsForArgument;
 use Zlikavac32\SymfonyExtras\TestHelper\PHPUnit\Constraint\KeyAppearsBeforeOtherKey;
 
 class DecoratorPassTest extends TestCase
@@ -49,7 +51,7 @@ class DecoratorPassTest extends TestCase
 
         self::assertThat(
             $container,
-            new DecoratorExistsFor('bar', 'bar.decorator-1', 'foo', 0, 0)
+            new DecoratorExistsFor('bar', 'decorator-1', 'foo', 0, 0)
         );
     }
 
@@ -80,11 +82,11 @@ class DecoratorPassTest extends TestCase
 
         self::assertThat(
             $container,
-            new DecoratorExistsFor('bar', 'bar.decorator-1', 'foo', 0, 0)
+            new DecoratorExistsFor('bar', 'decorator-1', 'foo', 0, 0)
         );
         self::assertThat(
             $container,
-            new DecoratorExistsFor('bar', 'bar.decorator-2', 'baz', 0, 0)
+            new DecoratorExistsFor('bar', 'decorator-2', 'baz', 0, 0)
         );
 
         self::assertThat(
@@ -124,11 +126,11 @@ class DecoratorPassTest extends TestCase
 
         self::assertThat(
             $container,
-            new DecoratorExistsFor('bar', 'bar.decorator-1', 'foo', 0, 8)
+            new DecoratorExistsFor('bar', 'decorator-1', 'foo', 0, 8)
         );
         self::assertThat(
             $container,
-            new DecoratorExistsFor('bar', 'bar.decorator-2', 'baz', 0, 88)
+            new DecoratorExistsFor('bar', 'decorator-2', 'baz', 0, 88)
         );
     }
 
@@ -185,11 +187,11 @@ class DecoratorPassTest extends TestCase
 
         self::assertThat(
             $container,
-            new DecoratorExistsFor('bar', 'bar.decorator-1', 'foo', 0, 0)
+            new DecoratorExistsFor('bar', 'decorator-1', 'foo', 0, 0)
         );
         self::assertThat(
             $container,
-            new DecoratorExistsFor('bar', 'bar.decorator-2', 'foo', 0, 0)
+            new DecoratorExistsFor('bar', 'decorator-2', 'foo', 0, 0)
         );
     }
 
@@ -232,11 +234,11 @@ class DecoratorPassTest extends TestCase
 
         self::assertThat(
             $container,
-            new DecoratorExistsFor('bar', 'bar.decorator-1', 'foo', 0, 0)
+            new DecoratorExistsFor('bar', 'decorator-1', 'foo', 0, 0)
         );
         self::assertThat(
             $container,
-            new DecoratorExistsFor('baz', 'baz.decorator-1', 'foo', 0, 0)
+            new DecoratorExistsFor('baz', 'decorator-1', 'foo', 0, 0)
         );
     }
 
@@ -291,7 +293,7 @@ class DecoratorPassTest extends TestCase
             ->addTag('decorator-1');
 
         $this->expectException(LogicException::class);
-        $this->expectExceptionMessage('Service bar has multiple decorator-1 tags which is not allowed');
+        $this->expectExceptionMessage('Only one tag decorator-1 allowed on service bar');
 
         $this->compilerPass->process($container);
     }
@@ -316,7 +318,7 @@ class DecoratorPassTest extends TestCase
 
         self::assertThat(
             $container,
-            new DecoratorExistsFor('bar', 'bar.decorator-1', 'foo', '$foo', 0)
+            new DecoratorExistsFor('bar', 'decorator-1', 'foo', '$foo', 0)
         );
     }
 
@@ -340,7 +342,7 @@ class DecoratorPassTest extends TestCase
 
         self::assertThat(
             $container,
-            new DecoratorExistsFor('bar', 'bar.decorator-1', 'foo', '$foo', 0)
+            new DecoratorExistsFor('bar', 'decorator-1', 'foo', '$foo', 0)
         );
 
         $currentFooDecoratorDefinition = $container->getDefinition('bar.decorator-1');
@@ -360,7 +362,165 @@ class DecoratorPassTest extends TestCase
 
         self::assertThat(
             $container,
-            new DecoratorExistsFor('bar', 'bar.decorator-2', 'baz', '$baz', 0)
+            new DecoratorExistsFor('bar', 'decorator-2', 'baz', '$baz', 0)
         );
+    }
+
+    /**
+     * @test
+     */
+    public function service_argument_can_be_decorated(): void
+    {
+        $container = new ContainerBuilder();
+
+        $container->register('foo')
+            ->setAbstract(true)
+            ->addTag('decorator', [
+                'tag' => 'decorator-1',
+            ]);
+
+        $container->register('bar')
+            ->setArgument('$baz', new Reference('baz'))
+            ->addTag('decorator-1', [
+                'argument' => '$baz'
+            ]);
+
+        $this->compilerPass->process($container);
+
+        self::assertThat(
+            $container,
+            new DecoratorExistsForArgument('bar', 'decorator-1', 'foo', '$baz', 0, 0)
+        );
+    }
+
+    /**
+     * @test
+     */
+    public function service_argument_can_be_decorated_with_multiple_decorators(): void
+    {
+        $container = new ContainerBuilder();
+
+        $container->register('foo')
+            ->setAbstract(true)
+            ->addTag('decorator', [
+                'tag' => 'decorator-1',
+            ]);
+
+        $container->register('bar')
+            ->setAbstract(true)
+            ->addTag('decorator', [
+                'tag' => 'decorator-2',
+                'argument' => '$bar'
+            ]);
+
+        $container->register('baz')
+            ->setArgument('$emo', new Reference('emo'))
+            ->addTag('decorator-1', [
+                'argument' => '$emo'
+            ])
+            ->addTag('decorator-2', [
+                'argument' => '$emo',
+                'priority' => 5
+            ]);
+
+        $this->compilerPass->process($container);
+
+        self::assertThat(
+            $container,
+            new DecoratorExistsForArgument('baz', 'decorator-1', 'foo', '$emo', 0, 0)
+        );
+
+        self::assertThat(
+            $container,
+            new DecoratorExistsForArgument('baz', 'decorator-2', 'bar', '$emo', '$bar', 5)
+        );
+    }
+
+    /**
+     * @test
+     */
+    public function multiple_arguments_can_be_decorated_with_same_decorator_on_same_service(): void
+    {
+        $container = new ContainerBuilder();
+
+        $container->register('foo')
+            ->setAbstract(true)
+            ->addTag('decorator', [
+                'tag' => 'decorator-1',
+            ]);
+
+        $container->register('bar')
+            ->setArgument('$baz', new Reference('baz'))
+            ->addTag('decorator-1', [
+                'argument' => '$baz'
+            ])
+            ->setArgument('$bazTwo', new Reference('baz'))
+            ->addTag('decorator-1', [
+                'argument' => '$bazTwo'
+            ]);
+
+        $this->compilerPass->process($container);
+
+        self::assertThat(
+            $container,
+            new DecoratorExistsForArgument('bar', 'decorator-1', 'foo', '$baz', 0, 0)
+        );
+
+        self::assertThat(
+            $container,
+            new DecoratorExistsForArgument('bar', 'decorator-1', 'foo', '$bazTwo', 0, 0)
+        );
+    }
+
+    /**
+     * @test
+     */
+    public function service_argument_must_be_explicitly_declared(): void
+    {
+        $container = new ContainerBuilder();
+
+        $container->register('foo')
+            ->setAbstract(true)
+            ->addTag('decorator', [
+                'tag' => 'decorator-1',
+            ]);
+
+        $container->register('bar')
+            ->addTag('decorator-1', [
+                'argument' => '$baz'
+            ]);
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('Argument $baz must be explicitly defined to reference some service (issue on service bar)');
+
+        $this->compilerPass->process($container);
+    }
+
+    /**
+     * @test
+     */
+    public function only_one_decorator_per_service_argument_allowed(): void
+    {
+        $container = new ContainerBuilder();
+
+        $container->register('foo')
+            ->setAbstract(true)
+            ->addTag('decorator', [
+                'tag' => 'decorator-1',
+            ]);
+
+        $container->register('bar')
+            ->setArgument('$baz', new Reference('bar'))
+            ->addTag('decorator-1', [
+                'argument' => '$baz'
+            ])
+            ->addTag('decorator-1', [
+                'argument' => '$baz'
+            ]);
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('Only one tag decorator-1 allowed on service bar and argument $baz');
+
+        $this->compilerPass->process($container);
     }
 }
