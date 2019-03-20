@@ -183,6 +183,32 @@ class ConsoleRunnablePassTest extends TestCase
 
         $this->compilerPass->process($container);
     }
+
+    /**
+     * @test
+     */
+    public function processing_is_idempotent(): void
+    {
+        $container = new ContainerBuilder();
+
+        $container->register('foo')
+            ->addTag(
+                'console_runnable',
+                [
+                    'command' => 'cmd:foo',
+                ]
+            );
+
+        $this->compilerPass->process($container);
+
+        self::assertThat($container, new CommandRegisteredForRunnable('foo', 'cmd:foo'));
+
+        $createdReference = $container->findDefinition('foo.command')->getArgument(0);
+
+        $this->compilerPass->process($container);
+
+        self::assertSame($createdReference, $container->findDefinition('foo.command')->getArgument(0));
+    }
 }
 
 class MockMapper implements \Zlikavac32\SymfonyExtras\DependencyInjection\Compiler\ConsoleRunnable\RunnableToNameMapper

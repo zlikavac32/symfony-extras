@@ -51,8 +51,23 @@ class ConsoleRunnablePass implements CompilerPassInterface
         try {
             $this->mappers = [];
 
+            // used to share state for multiple passes and will be removed in compile stage
+            // since nobody references it
+            $runnableDefinitions = sprintf('%s.%s.runnables', self::class, $this->tag);
+
+            if (!$container->has($runnableDefinitions)) {
+                $container->set($runnableDefinitions, new Set());
+            }
+
+            $runnableDefinitions = $container->get($runnableDefinitions);
+            assert($runnableDefinitions instanceof Set);
+
             foreach ($container->findTaggedServiceIds($this->tag, true) as $serviceId => $tagDefinition) {
                 assertOnlyOneTagPerService($tagDefinition, $this->tag, $serviceId);
+
+                if ($runnableDefinitions->contains($serviceId)) {
+                    continue;
+                }
 
                 $this->assertValidTagDefinition($tagDefinition[0], $serviceId);
 
@@ -61,6 +76,8 @@ class ConsoleRunnablePass implements CompilerPassInterface
                     $this->resolveCommandName($serviceId, $tagDefinition[0], $container),
                     $container
                 );
+
+                $runnableDefinitions->add($serviceId);
             }
         } finally {
             $this->mappers = null;
