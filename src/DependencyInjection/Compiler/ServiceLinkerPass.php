@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Zlikavac32\SymfonyExtras\DependencyInjection\Compiler;
 
+use Ds\An;
+use Ds\Hashable;
 use Ds\Map;
 use Ds\Set;
 use LogicException;
@@ -37,6 +39,10 @@ class ServiceLinkerPass implements CompilerPassInterface
      * @var Map|Map[]|Reference[][]
      */
     private $providers;
+    /**
+     * @var Set|ProcessedArgument[]
+     */
+    private $processedArguments;
 
     public function __construct(string $tag = 'linker')
     {
@@ -48,10 +54,19 @@ class ServiceLinkerPass implements CompilerPassInterface
         try {
             $this->providers = new Map();
 
+            $processedArguments = sprintf('%s.%s.linked_arguments', self::class, $this->tag);
+
+            if (!$container->has($processedArguments)) {
+                $container->set($processedArguments, new Set());
+            }
+
+            $this->processedArguments = $container->get($processedArguments);
+
             foreach ($container->findTaggedServiceIds($this->tag) as $serviceId => $tags) {
                 $this->linkServices($container, $serviceId, $tags);
             }
         } finally {
+            $this->processedArguments = null;
             $this->providers = null;
         }
     }
@@ -70,6 +85,14 @@ class ServiceLinkerPass implements CompilerPassInterface
             }
 
             $existingArguments->add($argument);
+
+            $processedArgument = new ProcessedArgument($serviceId, $argument);
+
+            if ($this->processedArguments->contains($processedArgument)) {
+                continue;
+            }
+
+            $this->processedArguments->add($processedArgument);
 
             if (isset($tag['provider_tag'])) {
                 $providerTag = $tag['provider_tag'];
@@ -239,5 +262,48 @@ class ServiceLinkerPass implements CompilerPassInterface
 
             $providers->put($key, new Reference($serviceId));
         }
+    }
+}
+
+/**
+ * @internal
+ */
+class ProcessedArgument implements Hashable
+{
+
+    /**
+     * @var string
+     */
+    private $serviceId;
+    private $argument;
+
+    public function __construct(string $serviceId, $argument)
+    {
+        assert(is_int($argument) || is_string($argument));
+
+        $this->serviceId = $serviceId;
+        $this->argument = $argument;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    function hash(): string
+    {
+        return sha1("{$this->serviceId}:{$this->argument}");
+    }
+
+    /**
+     * @inheritdoc
+     */
+    function equals($obj): bool
+    {
+        if (!$obj instanceof self) {
+            return false;
+        }
+
+        return $obj->serviceId === $this->serviceId
+            &&
+            $obj->argument === $this->argument;
     }
 }

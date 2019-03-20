@@ -64,6 +64,102 @@ class ServiceLinkerPassTest extends TestCase
     /**
      * @test
      */
+    public function linking_is_idempotent(): void
+    {
+        $container = new ContainerBuilder();
+
+        $container->register('foo')
+            ->addTag(
+                'linker',
+                [
+                    'provider_tag' => 'test_provider',
+                    'provider'     => 'test_group',
+                ]
+            );
+
+        $container->register('bar')
+            ->addTag(
+                'test_provider',
+                [
+                    'provides' => 'test_group',
+                ]
+            );
+
+        $this->compilerPass->process($container);
+
+        self::assertEquals(
+            [new Reference('bar')],
+            $container->findDefinition('foo')
+                ->getArguments()
+        );
+
+        $createdReference = $container->findDefinition('foo')->getArgument(0);
+
+        $this->compilerPass->process($container);
+
+        self::assertSame($createdReference, $container->findDefinition('foo')->getArgument(0));
+    }
+
+    /**
+     * @test
+     */
+    public function linking_can_be_done_in_multiple_passes(): void
+    {
+        $container = new ContainerBuilder();
+
+        $container->register('foo')
+            ->addTag(
+                'linker',
+                [
+                    'provider_tag' => 'test_provider',
+                    'provider'     => 'test_group',
+                ]
+            );
+
+        $container->register('bar')
+            ->addTag(
+                'test_provider',
+                [
+                    'provides' => 'test_group',
+                ]
+            );
+
+        $container->register('baz')
+            ->addTag(
+                'test_provider_2',
+                [
+                    'provides' => 'test_group_2',
+                ]
+            );
+
+        $this->compilerPass->process($container);
+
+        self::assertEquals(
+            [new Reference('bar')],
+            $container->findDefinition('foo')
+                ->getArguments()
+        );
+
+        $container->findDefinition('foo')
+            ->addTag('linker', [
+                'provider_tag' => 'test_provider_2',
+                'provider' => 'test_group_2',
+                'argument' => 1
+            ]);
+
+        $this->compilerPass->process($container);
+
+
+        self::assertEquals(
+            [new Reference('bar'), new Reference('baz')],
+            $container->findDefinition('foo')
+                ->getArguments()
+        );
+    }
+
+    /**
+     * @test
+     */
     public function provider_based_linking_should_link_service_on_custom_argument(): void
     {
         $container = new ContainerBuilder();
