@@ -67,7 +67,7 @@ class DecoratorPass implements CompilerPassInterface
 
             // used to share state for multiple passes and will be removed in compile stage
             // since nobody references it
-            $decoratorDefinitions = self::class . '.decorator_definitions';
+            $decoratorDefinitions = sprintf('%s.%s.decorator_definitions', self::class, $this->tag);
 
             if (!$container->has($decoratorDefinitions)) {
                 $container->set($decoratorDefinitions, new Map());
@@ -75,7 +75,7 @@ class DecoratorPass implements CompilerPassInterface
 
             $this->decoratorDefinitions = $container->get($decoratorDefinitions);
 
-            $processedTags = self::class . '.processed_tags';
+            $processedTags = sprintf('%s.%s.processed_tags', self::class, $this->tag);
 
             if (!$container->has($processedTags)) {
                 $container->set($processedTags, new Set());
