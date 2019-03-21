@@ -34,7 +34,7 @@
         "symfony/event-dispatcher": "To use dynamic event dispatcher"
     },
     "require": {
-        "php": "^7.1"
+        "php": "^7.2"
     },
     "require-dev": {
         "symfony/console": "^4.2",
