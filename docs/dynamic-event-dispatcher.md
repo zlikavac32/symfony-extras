@@ -4,7 +4,7 @@ If Symfony application requires more than one event dispatcher, additional dispa
 
 Compiler pass that automates that is provided in `\Zlikavac32\SymfonyExtras\DependencyInjection\Compiler\EventDispatcherPass`. Services tagged with `event_dispatcher` (can be changed) are registered as event dispatchers.
 
-Every tag requires `listener_tag` and `subscriber_tag` properties which declare tags used for listeners and subscribers.
+Every tag requires `listener_tag` and `subscriber_tag` property which declare tags used for listeners and subscribers respectively.
 
 In the example below, two dispatchers are registered.
 

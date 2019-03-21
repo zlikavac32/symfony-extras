@@ -1,12 +1,12 @@
 # Dynamic Composite
 
-Sometimes a group of services has to be injected to some other service, either through a constructor or through method calls.
+Sometimes a group of services has to be injected into some other service, either through a constructor or through method calls.
 
 Symfony provides limited support for that through `tagged` service injection.
 
 Compiler pass `\Zlikavac32\SymfonyExtras\DependencyInjection\Compiler\DynamicCompositePass` tries to provide more functionality.
 
-Service can be tagged with `dynamic_composite` which describes how are services injected into it. Property `tag` describers tag used to collect services and additional properties describe how it's injected.
+Services can be tagged with `dynamic_composite` which describes how other services are injected into them. Property `tag` describers tag used to collect services and additional properties describe how they are injected.
 
 Collected services can be prioritized using `priority` property. Services are sorted in the ascending order in respect to the priority and within same priority to the order of service discovery from the container.
 
@@ -17,7 +17,7 @@ Collected services can be prioritized using `priority` property. Services are so
 Simple configuration could be defined as in the example below.
 
 ```yaml
-# assume __construct(array $services) will result in
+# assuming __construct(array $services) exists, this will result in
 # __construct(['@bar_injected_service', '@foo_injected_service'])
 Demo\FooComposite:
     tags:

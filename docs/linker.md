@@ -33,7 +33,9 @@ Different argument can be also specified.
 
 ```yaml
 # links foo_logger with this service in argument $logger
+# assuming that Foo has argument $logger in constructor
 service_needing_logger:
+    class: Foo
     ...
     tags:
         - { name: linker, provider_tag: dynamic_logger, provider: foo, argument: $logger }
@@ -43,7 +45,7 @@ service_needing_logger:
 
 Indirect linking uses one more tag to describe how arguments are linked. This is used in combination with service decoration (read [dynamic-decorator.md](dynamic-decorator.md)) to allow decorating service to define what it's linked with.
 
-If direct linking were used, every service that needs decoration would have to know about arguments in the decorator template.
+If direct linking was used, every service that needs decoration would have to know about arguments in the decorator template.
 
 To combat that, linker can be configured to resolve concrete service through resolver tag. Property `argument_resolver_tag` defines tag that will be used to resolve single argument.
 
@@ -52,16 +54,45 @@ Resolved argument can be from a provider, a concrete service or a container para
 Example of linking decorated services.
 
 ```yaml
-\Demo\LoggerDecorator:
+bar_logger:
+    class: Monolog\Logger
+    ...
+    tags:
+        - { name: dynamic_logger, provides: bar }
+
+Demo\LoggerDecorator:
     abstract: true
     tags:
         - { name: decorator, tag: decorator.domain_foo }
         - { name: linker, argument_resolver_tag: logger_decorator_logger, argument: $logger }
 
 # LoggerDecorator will use foo_logger
-\Demo\ConcreteService:
+Demo\ConcreteService:
     tags:
         - { name: decorator.domain_foo, i0_name: logger_decorator_logger, i0_provider_tag: dynamic_logger, i0_provider: foo }
+```
+
+In the example above, decorator pass process `decorator` and `decorator.domain_foo` tags and define following service:
+
+```yaml
+Demo\ConcreteService.decorator.domain_foo:
+    decorates: Demo\ConcreteService
+    tags:
+        - { name: linker, argument_resolver_tag: logger_decorator_logger, argument: $logger }
+        - { name: logger_decorator_logger, provider_tag: dynamic_logger, provider: foo }
+```
+
+Next tag is `linker` which processes `logger_decorator_logger` to get final service:
+
+```yaml
+Demo\ConcreteService.decorator.domain_foo:
+    decorates: Demo\ConcreteService
+    arguments:
+        - '@bar_logger'
+    # processed tags are never removed, but they are processed only once
+    tags:
+        - { name: linker, argument_resolver_tag: logger_decorator_logger, argument: $logger }
+        - { name: logger_decorator_logger, provider_tag: dynamic_logger, provider: foo }
 ```
 
 Instead of the `provider_tag` and `provider` properties, we could have used `service` and `param` properties. `param` property links with a parameter, while `service` property links with a service from the container.

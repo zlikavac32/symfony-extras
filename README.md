@@ -15,7 +15,9 @@ This repository adds a few extra functionality that I miss in the Symfony compon
 
 ## Introduction
 
-Idea of this library to use what you need. No dependency is explicitly required as no code is run by default. It provides few things, like various compiler passes to make a life a bit easier.
+Idea of this library is to use what you need. No dependency is explicitly required as no code is run by default. It provides few things, like various compiler passes to make a life a bit easier.
+
+Compiler passes are all idempotent.
 
 ## Installation
 
