@@ -15,6 +15,7 @@ use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Reference;
 use Zlikavac32\SymfonyExtras\DependencyInjection\Compiler\DynamicComposite\CompositeMethodArgumentResolver;
 use function Zlikavac32\SymfonyExtras\DependencyInjection\assertValueIsOfType;
+use function Zlikavac32\SymfonyExtras\DependencyInjection\processedItemsSetFromContainer;
 
 /**
  * Registers services as composite services that require injection of other services.
@@ -33,6 +34,14 @@ class DynamicCompositePass implements CompilerPassInterface
      * @var Map|CompositeMethodArgumentResolver[]
      */
     private $argumentResolvers;
+    /**
+     * @var Map|string[]
+     */
+    private $processedTags;
+    /**
+     * @var Set|string[]
+     */
+    private $globallyProcessedTags;
 
     public function __construct(string $tag = 'dynamic_composite', ?Map $argumentResolvers = null)
     {
@@ -42,8 +51,16 @@ class DynamicCompositePass implements CompilerPassInterface
 
     public function process(ContainerBuilder $container): void
     {
-        foreach ($container->findTaggedServiceIds($this->tag) as $serviceId => $tags) {
-            $this->registerDynamicTraversers($container, $serviceId, $tags);
+        $this->processedTags = new Map();
+        $this->globallyProcessedTags = processedItemsSetFromContainer($container, self::class, $this->tag, 'composite_tags');
+
+        try {
+            foreach ($container->findTaggedServiceIds($this->tag) as $serviceId => $tags) {
+                $this->registerDynamicTraversers($container, $serviceId, $tags);
+            }
+        } finally {
+            $this->processedTags = null;
+            $this->globallyProcessedTags = null;
         }
     }
 
@@ -51,12 +68,23 @@ class DynamicCompositePass implements CompilerPassInterface
     {
         foreach ($tags as $tag) {
             $tagName = $tag['tag'] ?? null;
-            $method = $tag['method'] ?? '__construct';
-            $argument = $tag['argument'] ?? 0;
-            $isPrioritized = $tag['prioritized'] ?? true;
 
             assertValueIsOfType($tagName, new Set(['string']), 'tag', $serviceId);
             /** @var string $tagName */
+
+            if ($this->processedTags->hasKey($tagName)) {
+                throw new LogicException(sprintf('Tag %s already provided by service %s', $tagName, $this->processedTags->get($tagName)));
+            }
+
+            $this->processedTags->put($tagName, $serviceId);
+
+            if ($this->globallyProcessedTags->contains($tagName)) {
+                continue ;
+            }
+
+            $method = $tag['method'] ?? '__construct';
+            $argument = $tag['argument'] ?? 0;
+            $isPrioritized = $tag['prioritized'] ?? true;
 
             assertValueIsOfType($method, new Set(['string']), 'method', $serviceId);
             assertValueIsOfType($argument, new Set(['string', 'integer']), 'argument', $serviceId);
@@ -72,6 +100,8 @@ class DynamicCompositePass implements CompilerPassInterface
                 $method,
                 $argument
             );
+
+            $this->globallyProcessedTags->add($tagName);
         }
     }
 

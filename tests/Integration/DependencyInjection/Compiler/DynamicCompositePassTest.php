@@ -365,6 +365,72 @@ class DynamicCompositePassTest extends TestCase
         $this->compilerPass->process($container);
     }
 
+    /**
+     * @test
+     */
+    public function exception_is_thrown_when_multiple_services_use_same_tag(): void
+    {
+        $container = new ContainerBuilder();
+
+        $container->register('foo')
+            ->addTag(
+                'dynamic_composite',
+                [
+                    'tag'    => 'test_composite',
+                    'method' => 'compositeMethod',
+                ]
+            );
+
+        $container->register('baz')
+            ->addTag(
+                'dynamic_composite',
+                [
+                    'tag'    => 'test_composite',
+                    'method' => 'compositeMethod',
+                ]
+            );
+
+        $container->register('bar')
+            ->addTag('test_composite');
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('Tag test_composite already provided by service foo');
+
+        $this->compilerPass->process($container);
+    }
+
+    /**
+     * @test
+     */
+    public function linking_composite_elements_is_idempotent(): void
+    {
+        $container = new ContainerBuilder();
+
+        $container->register('foo')
+            ->addTag(
+                'dynamic_composite',
+                [
+                    'tag' => 'test_composite',
+                ]
+            );
+
+        $container->register('bar')
+            ->addTag('test_composite');
+
+        $this->compilerPass->process($container);
+
+        self::assertEquals(
+            [[new Reference('bar')]],
+            $container->getDefinition('foo')
+                ->getArguments()
+        );
+
+        $currentReference = $container->getDefinition('foo')->getArgument(0);
+
+        $this->compilerPass->process($container);
+
+        self::assertSame($currentReference, $container->getDefinition('foo')->getArgument(0));
+    }
 }
 
 class MockMethodResolver implements CompositeMethodArgumentResolver
