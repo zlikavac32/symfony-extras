@@ -18,6 +18,7 @@ use Symfony\Component\DependencyInjection\Reference;
 use function Zlikavac32\SymfonyExtras\DependencyInjection\assertDefinitionIsAbstract;
 use function Zlikavac32\SymfonyExtras\DependencyInjection\assertOnlyOneTagPerService;
 use function Zlikavac32\SymfonyExtras\DependencyInjection\assertValueIsOfType;
+use function Zlikavac32\SymfonyExtras\DependencyInjection\processedItemsSetFromContainer;
 use function Zlikavac32\SymfonyExtras\DependencyInjection\reconstructTags;
 
 /**
@@ -60,28 +61,14 @@ class DecoratorPass implements CompilerPassInterface
 
         $this->buildMapOfTagsAndServices($container);
 
+        $this->decoratorDefinitions = new Map();
+
         try {
             if (!$this->tagToServicesMap->hasKey($this->tag)) {
                 return;
             }
 
-            // used to share state for multiple passes and will be removed in compile stage
-            // since nobody references it
-            $decoratorDefinitions = sprintf('%s.%s.decorator_definitions', self::class, $this->tag);
-
-            if (!$container->has($decoratorDefinitions)) {
-                $container->set($decoratorDefinitions, new Map());
-            }
-
-            $this->decoratorDefinitions = $container->get($decoratorDefinitions);
-
-            $processedTags = sprintf('%s.%s.processed_tags', self::class, $this->tag);
-
-            if (!$container->has($processedTags)) {
-                $container->set($processedTags, new Set());
-            }
-
-            $this->processedTags = $container->get($processedTags);
+            $this->processedTags = processedItemsSetFromContainer($container, self::class, $this->tag, 'processed_tags');
 
             $this->buildMapOfDecorators($container);
 

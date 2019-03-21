@@ -15,6 +15,7 @@ use Symfony\Component\DependencyInjection\Reference;
 use function Zlikavac32\SymfonyExtras\DependencyInjection\assertDefinitionIsNotAbstract;
 use function Zlikavac32\SymfonyExtras\DependencyInjection\assertOnlyOneTagPerService;
 use function Zlikavac32\SymfonyExtras\DependencyInjection\assertValueIsOfType;
+use function Zlikavac32\SymfonyExtras\DependencyInjection\processedItemsSetFromContainer;
 
 /**
  * Links services with other services or parameters. Linker can be defined
@@ -54,13 +55,7 @@ class ServiceLinkerPass implements CompilerPassInterface
         try {
             $this->providers = new Map();
 
-            $processedArguments = sprintf('%s.%s.linked_arguments', self::class, $this->tag);
-
-            if (!$container->has($processedArguments)) {
-                $container->set($processedArguments, new Set());
-            }
-
-            $this->processedArguments = $container->get($processedArguments);
+            $this->processedArguments = processedItemsSetFromContainer($container, self::class, $this->tag, 'linked_arguments');
 
             foreach ($container->findTaggedServiceIds($this->tag) as $serviceId => $tags) {
                 $this->linkServices($container, $serviceId, $tags);

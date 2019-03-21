@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Zlikavac32\SymfonyExtras\DependencyInjection;
 
+use Ds\Set;
 use LogicException;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
 
 /**
  * Reconstructs tags from their linear representation. Since tag properties must be scalar values,
@@ -57,4 +59,24 @@ function reconstructTags(array $tagDefinition): array
     }
 
     return $tags;
+}
+
+function processedItemsSetFromContainer(
+    ContainerBuilder $container,
+    string $class,
+    string $tag,
+    string $sufix
+): Set {
+    // used to share state for multiple passes and will be removed in compile stage
+    // since nobody references it
+    $serviceKey = sprintf('%s.%s.%s', $class, $tag, $sufix);
+
+    if (!$container->has($serviceKey)) {
+        $container->set($serviceKey, new Set());
+    }
+
+    $set = $container->get($serviceKey);
+    assert($set instanceof Set);
+
+    return $set;
 }

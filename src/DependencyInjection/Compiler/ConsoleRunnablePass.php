@@ -16,6 +16,7 @@ use Zlikavac32\SymfonyExtras\Command\Runnable\RunnableCommand;
 use Zlikavac32\SymfonyExtras\DependencyInjection\Compiler\ConsoleRunnable\RunnableToNameMapper;
 use function Zlikavac32\SymfonyExtras\DependencyInjection\assertOnlyOneTagPerService;
 use function Zlikavac32\SymfonyExtras\DependencyInjection\assertValueIsOfType;
+use function Zlikavac32\SymfonyExtras\DependencyInjection\processedItemsSetFromContainer;
 
 /**
  * Compiler pass that registers Symfony commands from existing runnable services.
@@ -51,15 +52,8 @@ class ConsoleRunnablePass implements CompilerPassInterface
         try {
             $this->mappers = [];
 
-            // used to share state for multiple passes and will be removed in compile stage
-            // since nobody references it
-            $runnableDefinitions = sprintf('%s.%s.runnables', self::class, $this->tag);
+            $runnableDefinitions = processedItemsSetFromContainer($container, self::class, $this->tag, 'runnables');
 
-            if (!$container->has($runnableDefinitions)) {
-                $container->set($runnableDefinitions, new Set());
-            }
-
-            $runnableDefinitions = $container->get($runnableDefinitions);
             assert($runnableDefinitions instanceof Set);
 
             foreach ($container->findTaggedServiceIds($this->tag, true) as $serviceId => $tagDefinition) {
