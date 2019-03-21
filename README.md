@@ -1,5 +1,7 @@
 # Symfony extras
 
+[![Build Status](https://travis-ci.org/zlikavac32/symfony-extras.svg?branch=master)](https://travis-ci.org/zlikavac32/symfony-extras)
+
 This repository adds a few extra functionality that I miss in the Symfony components. Functionality is currently only DIC and console related.
 
 ## Table of contents
