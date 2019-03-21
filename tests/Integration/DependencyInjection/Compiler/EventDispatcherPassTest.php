@@ -213,6 +213,54 @@ class EventDispatcherPassTest extends TestCase
 
         $this->compilerPass->process($container);
     }
+
+    /**
+     * @test
+     */
+    public function processing_is_idempotent(): void {
+        $container = new ContainerBuilder();
+
+        $container->register('foo')
+            ->setClass(EventDispatcher::class)
+            ->addTag(
+                'event_dispatcher',
+                [
+                    'listener_tag'   => 'test_listener',
+                    'subscriber_tag' => 'test_subscriber',
+                ]
+            );
+
+        $container->register('bar')
+            ->setClass(MockListener::class)
+            ->addTag(
+                'test_listener',
+                [
+                    'event'  => 'test_event',
+                    'method' => 'onAction',
+                ]
+            );
+
+        $this->compilerPass->process($container);
+
+        self::assertThat(
+            $container,
+            new MethodCallExistsFor(
+                'foo', 'addListener',
+                [
+                    'test_event',
+                    [new ServiceClosureArgument(new Reference('bar')), 'onAction'],
+                    0,
+                ],
+                1
+            )
+        );
+
+        $methodCalls = $container->findDefinition('foo')->getMethodCalls();
+
+        $this->compilerPass->process($container);
+
+        $this->assertSame($methodCalls, $container->findDefinition('foo')->getMethodCalls());
+    }
 }
 
 class MockListener

@@ -9,6 +9,7 @@ use LogicException;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\EventDispatcher\DependencyInjection\RegisterListenersPass;
+use function Zlikavac32\SymfonyExtras\DependencyInjection\processedItemsSetFromContainer;
 
 /**
  * Registers service as event dispatcher and links proper
@@ -31,8 +32,16 @@ class EventDispatcherPass implements CompilerPassInterface
     {
         $registeredDispatchers = $this->findRegisteredDispatchers($container);
 
+        $processedTags = processedItemsSetFromContainer($container, self::class, $this->tag, 'events');
+
         foreach ($registeredDispatchers as [$serviceId, $listenerTag, $subscriberTag]) {
+            if ($processedTags->contains($listenerTag)) {
+                continue;
+            }
+
             (new RegisterListenersPass($serviceId, $listenerTag, $subscriberTag))->process($container);
+
+            $processedTags->add($listenerTag);
         }
     }
 
