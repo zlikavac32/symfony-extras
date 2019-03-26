@@ -63,6 +63,14 @@ Read more about this concept in [docs/dynamic-composite.md](docs/dynamic-composi
 
 One might say that here is to much `magic` involved, but if you understand how it all works, there is hardly any magic left.
 
+### buildMapOfTagsAndServiceIds()
+
+Method `findTaggedServiceIds()` on the `\Symfony\Component\DependencyInjection\ContainerBuilder` finds tags in linear time depending on the number of services, so for `M` queries and `N` services, we have `N * M` operations.
+
+Function `buildMapOfTagsAndServiceIds()` provided in this repo builds a map of tag names to the sets of service ids that are tagged with them. If we assume access to the hash map is in constant time, now we have `N + M` operations.
+
+Do note that by not calling `findTaggedServiceIds()`, method `\Symfony\Component\DependencyInjection\ContainerBuilder::findUnusedTags()` will return more tags than it should. If you relay on that method, then this library is not for you.
+
 ## Examples
 
 Check [examples](examples) folder for examples.

@@ -16,8 +16,8 @@ use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
 use function Zlikavac32\SymfonyExtras\DependencyInjection\assertDefinitionIsAbstract;
-use function Zlikavac32\SymfonyExtras\DependencyInjection\assertOnlyOneTagPerService;
 use function Zlikavac32\SymfonyExtras\DependencyInjection\assertValueIsOfType;
+use function Zlikavac32\SymfonyExtras\DependencyInjection\buildMapOfTagsAndServiceIds;
 use function Zlikavac32\SymfonyExtras\DependencyInjection\processedItemsSetFromContainer;
 use function Zlikavac32\SymfonyExtras\DependencyInjection\reconstructTags;
 
@@ -57,9 +57,7 @@ class DecoratorPass implements CompilerPassInterface
 
     public function process(ContainerBuilder $container): void
     {
-        $this->tagToServicesMap = new Map();
-
-        $this->buildMapOfTagsAndServices($container);
+        $this->tagToServicesMap = buildMapOfTagsAndServiceIds($container);
 
         $this->decoratorDefinitions = new Map();
 
@@ -79,20 +77,6 @@ class DecoratorPass implements CompilerPassInterface
             $this->tagToServicesMap = null;
             $this->decoratorDefinitions = null;
             $this->processedTags = null;
-        }
-    }
-
-    private function buildMapOfTagsAndServices(ContainerBuilder $container): void
-    {
-        foreach ($container->getDefinitions() as $serviceId => $definition) {
-            foreach (array_keys($definition->getTags()) as $tagName) {
-                if (!$this->tagToServicesMap->hasKey($tagName)) {
-                    $this->tagToServicesMap->put($tagName, new Set());
-                }
-
-                $this->tagToServicesMap->get($tagName)
-                    ->add($serviceId);
-            }
         }
     }
 

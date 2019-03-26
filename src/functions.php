@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Zlikavac32\SymfonyExtras\DependencyInjection;
 
+use Ds\Map;
 use Ds\Set;
 use LogicException;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -79,4 +80,26 @@ function processedItemsSetFromContainer(
     assert($set instanceof Set);
 
     return $set;
+}
+
+/**
+ * Builds a map of tag names to the sets of service IDs
+ *
+ * @return Map|Set[]|string[][]
+ */
+function buildMapOfTagsAndServiceIds(ContainerBuilder $container): Map {
+    $map = new Map();
+
+    foreach ($container->getDefinitions() as $serviceId => $definition) {
+        foreach (array_keys($definition->getTags()) as $tagName) {
+            if (!$map->hasKey($tagName)) {
+                $map->put($tagName, new Set());
+            }
+
+            $map->get($tagName)
+                ->add($serviceId);
+        }
+    }
+
+    return $map;
 }

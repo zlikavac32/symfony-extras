@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Zlikavac32\SymfonyExtras\DependencyInjection\Compiler;
 
-use Ds\An;
 use Ds\Hashable;
 use Ds\Map;
 use Ds\Set;
@@ -15,6 +14,7 @@ use Symfony\Component\DependencyInjection\Reference;
 use function Zlikavac32\SymfonyExtras\DependencyInjection\assertDefinitionIsNotAbstract;
 use function Zlikavac32\SymfonyExtras\DependencyInjection\assertOnlyOneTagPerService;
 use function Zlikavac32\SymfonyExtras\DependencyInjection\assertValueIsOfType;
+use function Zlikavac32\SymfonyExtras\DependencyInjection\buildMapOfTagsAndServiceIds;
 use function Zlikavac32\SymfonyExtras\DependencyInjection\processedItemsSetFromContainer;
 
 /**
@@ -41,6 +41,10 @@ class ServiceLinkerPass implements CompilerPassInterface
      */
     private $providers;
     /**
+     * @var Map|Set[]|string[][]
+     */
+    private $tagToServicesMap;
+    /**
      * @var Set|ProcessedArgument[]
      */
     private $processedArguments;
@@ -52,15 +56,22 @@ class ServiceLinkerPass implements CompilerPassInterface
 
     public function process(ContainerBuilder $container): void
     {
+        $this->tagToServicesMap = buildMapOfTagsAndServiceIds($container);
+
         try {
+            if (!$this->tagToServicesMap->hasKey($this->tag)) {
+                return ;
+            }
+
             $this->providers = new Map();
 
             $this->processedArguments = processedItemsSetFromContainer($container, self::class, $this->tag, 'linked_arguments');
 
-            foreach ($container->findTaggedServiceIds($this->tag) as $serviceId => $tags) {
-                $this->linkServices($container, $serviceId, $tags);
+            foreach ($this->tagToServicesMap->get($this->tag) as $serviceId) {
+                $this->linkServices($container, $serviceId, $container->findDefinition($serviceId)->getTag($this->tag));
             }
         } finally {
+            $this->tagToServicesMap = null;
             $this->processedArguments = null;
             $this->providers = null;
         }
@@ -132,9 +143,13 @@ class ServiceLinkerPass implements CompilerPassInterface
         $argument,
         string $consumerTag
     ): void {
+        if (!$this->tagToServicesMap->hasKey($consumerTag)) {
+            return ;
+        }
 
-        foreach ($container->findTaggedServiceIds($consumerTag) as $serviceId => $tags) {
+        foreach ($this->tagToServicesMap->get($consumerTag) as $serviceId) {
             $serviceDefinition = $container->findDefinition($serviceId);
+            $tags = $serviceDefinition->getTag($consumerTag);
 
             assertDefinitionIsNotAbstract($serviceDefinition, $serviceId);
             assertOnlyOneTagPerService($tags, $consumerTag, $serviceId);
@@ -217,15 +232,15 @@ class ServiceLinkerPass implements CompilerPassInterface
             return;
         }
 
-        $servicesProviderTags = $container->findTaggedServiceIds($providerTag);
-
-        if (count($servicesProviderTags) === 0) {
+        if (!$this->tagToServicesMap->hasKey($providerTag)) {
             throw new LogicException(sprintf('No providers with tag %s found', $providerTag));
         }
 
         $providers = new Map();
 
-        foreach ($servicesProviderTags as $serviceId => $tags) {
+        foreach ($this->tagToServicesMap->get($providerTag) as $serviceId) {
+            $tags = $container->findDefinition($serviceId)->getTag($providerTag);
+
             $this->discoverProvidersFromTags($providers, $tags, $providerTag, $serviceId);
         }
 

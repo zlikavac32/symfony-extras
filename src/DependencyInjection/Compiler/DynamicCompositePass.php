@@ -15,6 +15,7 @@ use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Reference;
 use Zlikavac32\SymfonyExtras\DependencyInjection\Compiler\DynamicComposite\CompositeMethodArgumentResolver;
 use function Zlikavac32\SymfonyExtras\DependencyInjection\assertValueIsOfType;
+use function Zlikavac32\SymfonyExtras\DependencyInjection\buildMapOfTagsAndServiceIds;
 use function Zlikavac32\SymfonyExtras\DependencyInjection\processedItemsSetFromContainer;
 
 /**
@@ -42,6 +43,10 @@ class DynamicCompositePass implements CompilerPassInterface
      * @var Set|string[]
      */
     private $globallyProcessedTags;
+    /**
+     * @var Map|Set[]|string[][]
+     */
+    private $tagToServicesMap;
 
     public function __construct(string $tag = 'dynamic_composite', ?Map $argumentResolvers = null)
     {
@@ -51,16 +56,28 @@ class DynamicCompositePass implements CompilerPassInterface
 
     public function process(ContainerBuilder $container): void
     {
+        $this->tagToServicesMap = buildMapOfTagsAndServiceIds($container);
+
         $this->processedTags = new Map();
         $this->globallyProcessedTags = processedItemsSetFromContainer($container, self::class, $this->tag, 'composite_tags');
 
         try {
-            foreach ($container->findTaggedServiceIds($this->tag) as $serviceId => $tags) {
-                $this->registerDynamicTraversers($container, $serviceId, $tags);
+            if (!$this->tagToServicesMap->hasKey($this->tag)) {
+                return ;
+            }
+
+            foreach ($this->tagToServicesMap->get($this->tag) as $serviceId) {
+                $this->registerDynamicTraversers(
+                    $container,
+                    $serviceId,
+                    $container->findDefinition($serviceId)
+                        ->getTag($this->tag)
+                );
             }
         } finally {
             $this->processedTags = null;
             $this->globallyProcessedTags = null;
+            $this->tagToServicesMap = null;
         }
     }
 
@@ -109,8 +126,12 @@ class DynamicCompositePass implements CompilerPassInterface
     {
         $priorityQueue = new PriorityQueue();
 
-        foreach ($container->findTaggedServiceIds($tag) as $serviceId => $tags) {
-            foreach ($tags as $singleTag) {
+        if (!$this->tagToServicesMap->hasKey($tag)) {
+            return new Vector($priorityQueue);
+        }
+
+        foreach ($this->tagToServicesMap->get($tag) as $serviceId) {
+            foreach ($container->findDefinition($serviceId)->getTag($tag) as $singleTag) {
                 $priority = 0;
 
                 if ($isPrioritized) {
