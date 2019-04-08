@@ -68,8 +68,6 @@ function processedItemsSetFromContainer(
     string $tag,
     string $sufix
 ): Set {
-    // used to share state for multiple passes and will be removed in compile stage
-    // since nobody references it
     $serviceKey = sprintf('%s.%s.%s', $class, $tag, $sufix);
 
     if (!$container->has($serviceKey)) {
