@@ -31,7 +31,8 @@
         "ext-ds": "To use this library at all",
         "php-ds/php-ds": "If you can't install ext-ds",
         "symfony/config": "To use console runnable",
-        "symfony/event-dispatcher": "To use dynamic event dispatcher"
+        "symfony/event-dispatcher": "To use dynamic event dispatcher",
+        "zlikavac32/nsb-decorators": "To use decorator proxies"
     },
     "require": {
         "php": "^7.2"
@@ -43,7 +44,8 @@
         "symfony/config": "^4.2",
         "symfony/event-dispatcher": "^4.2",
         "phpunit/phpunit": "^7.5.6",
-        "symfony/var-dumper": "^4.2"
+        "symfony/var-dumper": "^4.2",
+        "zlikavac32/nsb-decorators": "^0.1.0"
     },
     "minimum-stability": "stable"
 }

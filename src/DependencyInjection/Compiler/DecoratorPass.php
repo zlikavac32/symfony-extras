@@ -4,17 +4,19 @@ declare(strict_types=1);
 
 namespace Zlikavac32\SymfonyExtras\DependencyInjection\Compiler;
 
-use Closure;
 use Ds\Hashable;
 use Ds\Map;
 use Ds\Sequence;
 use Ds\Set;
 use Ds\Vector;
 use LogicException;
+use ReflectionClass;
+use ReflectionParameter;
 use Symfony\Component\DependencyInjection\ChildDefinition;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
+use Zlikavac32\NSBDecorators\Proxy;
 use function Zlikavac32\SymfonyExtras\DependencyInjection\assertDefinitionIsAbstract;
 use function Zlikavac32\SymfonyExtras\DependencyInjection\assertValueIsOfType;
 use function Zlikavac32\SymfonyExtras\DependencyInjection\buildMapOfTagsAndServiceIds;
@@ -177,7 +179,19 @@ class DecoratorPass implements CompilerPassInterface
                         unset($tag['argument']);
                     }
 
-                    $tagReference = new TagReference($tags[0], $serviceId, $decoratingPriority, $argument, $tag);
+                    $isProxied = $tag['proxy'] ?? false;
+
+                    assertValueIsOfType($isProxied, new Set(['boolean']), 'proxy', $serviceId);
+
+                    if ($isProxied && !class_exists(Proxy::class)) {
+                        throw new LogicException(sprintf(
+                            'Class %s missing. Please install zlikavac32/nsb-decorators or don\'t use proxied decorators',
+                            Proxy::class
+                        ));
+                    }
+
+                    $tagReference = new TagReference($tags[0], $serviceId, $decoratingPriority, $isProxied, $argument,
+                        $tag);
 
                     if ($processedTagReferences->contains($tagReference)) {
                         throw new LogicException(
@@ -189,7 +203,6 @@ class DecoratorPass implements CompilerPassInterface
                     $collectedTagReferences->push($tagReference);
                     $processedTagReferences->add($tagReference);
                 }
-
 
                 return $collectedTagReferences;
             })
@@ -271,8 +284,33 @@ class DecoratorPass implements CompilerPassInterface
 
         $decoratingService = new ChildDefinition($decoratorDefinition->serviceId());
 
-        $newTags = $container->findDefinition($decoratorDefinition->serviceId())
-            ->getTags();
+        $decoratorServiceDefinition = $container->findDefinition($decoratorDefinition->serviceId());
+
+        if ($tagReference->isProxied()) {
+            $decoratorClass = $decoratorServiceDefinition->getClass();
+            $subjectClass = $container->findDefinition($decoratedServiceId)
+                ->getClass();
+
+            $toAssert = [
+                $decoratorDefinition->serviceId() => $decoratorClass,
+                $decoratedServiceId               => $subjectClass,
+            ];
+
+            foreach ($toAssert as $serviceId => $class) {
+                if ($class) {
+                    continue;
+                }
+
+                throw new LogicException(sprintf('Class must be defined on service %s when using proxied decorators',
+                    $serviceId));
+            }
+
+            $argument = $this->resolveArgumentNameFromClass($decoratorClass, $decoratorDefinition);
+
+            $decoratingService->setClass(Proxy::createFQNForProxyClass($decoratorClass, $subjectClass, $argument));
+        }
+
+        $newTags = $decoratorServiceDefinition->getTags();
 
         unset($newTags[$this->tag]);
 
@@ -290,6 +328,42 @@ class DecoratorPass implements CompilerPassInterface
         }
 
         $container->setDefinition($decoratingServiceId, $decoratingService);
+    }
+
+    private function resolveArgumentNameFromClass(string $fqn, DecoratorDefinition $decoratorDefinition): string
+    {
+        $argument = $decoratorDefinition->argument();
+
+        $constructorMethod = (new ReflectionClass($fqn))
+            ->getConstructor();
+
+        $parameters = null === $constructorMethod ? [] : $constructorMethod->getParameters();
+
+        if (is_int($argument)) {
+            if (!isset($parameters[$argument])) {
+                throw new LogicException(sprintf('Argument %d not found on service %s (class %s)', $argument,
+                    $decoratorDefinition->serviceId(), $fqn));
+            }
+
+            return $parameters[$argument]->getName();
+        }
+
+        if (strlen($argument) < 2 || $argument[0] !== '$') {
+            throw new LogicException(sprintf('Argument %s is not valid on service %s (class %s)', $argument,
+                $decoratorDefinition->serviceId(), $fqn));
+        }
+
+        $argument = substr($argument, 1);
+
+        $foundParam = array_filter($parameters, function (ReflectionParameter $parameter) use ($argument): bool {
+            return $parameter->getName() === $argument;
+        });
+
+        if (count($foundParam) !== 1) {
+            throw new LogicException(sprintf('Argument $%s not found on service %s (class %s)', $argument, $decoratorDefinition->serviceId(), $fqn));
+        }
+
+        return $argument;
     }
 }
 
@@ -320,9 +394,19 @@ class TagReference implements Hashable
      */
     private $remainingProperties;
     private $argument;
+    /**
+     * @var bool
+     */
+    private $isProxied;
 
-    public function __construct(string $tagName, string $serviceId, int $priority, $argument, array $remainingProperties)
-    {
+    public function __construct(
+        string $tagName,
+        string $serviceId,
+        int $priority,
+        bool $isProxied,
+        $argument,
+        array $remainingProperties
+    ) {
         assert(is_null($argument) || is_int($argument) || is_string($argument));
 
         $this->tagName = $tagName;
@@ -331,6 +415,7 @@ class TagReference implements Hashable
         $this->hash = sha1($tagName . ':' . $serviceId . ':' . $argument);
         $this->remainingProperties = $remainingProperties;
         $this->argument = $argument;
+        $this->isProxied = $isProxied;
     }
 
     public function remainingProperties(): array
@@ -351,6 +436,11 @@ class TagReference implements Hashable
     public function priority(): int
     {
         return $this->priority;
+    }
+
+    public function isProxied(): bool
+    {
+        return $this->isProxied;
     }
 
     /**

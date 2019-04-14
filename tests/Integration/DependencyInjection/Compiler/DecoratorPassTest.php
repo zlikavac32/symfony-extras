@@ -6,12 +6,16 @@ namespace Zlikavac32\SymfonyExtras\Tests\Integration\DependencyInjection\Compile
 
 use LogicException;
 use PHPUnit\Framework\TestCase;
+use stdClass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
 use Zlikavac32\SymfonyExtras\DependencyInjection\Compiler\DecoratorPass;
 use Zlikavac32\SymfonyExtras\TestHelper\PHPUnit\Constraint\DecoratorExistsFor;
 use Zlikavac32\SymfonyExtras\TestHelper\PHPUnit\Constraint\DecoratorExistsForArgument;
 use Zlikavac32\SymfonyExtras\TestHelper\PHPUnit\Constraint\KeyAppearsBeforeOtherKey;
+use Zlikavac32\SymfonyExtras\TestHelper\PHPUnit\Constraint\ProxiedDecoratorExistsFor;
+use Zlikavac32\SymfonyExtras\Tests\Fixtures\ConcreteCommand;
+use Zlikavac32\SymfonyExtras\Tests\Fixtures\DecoratorCommand;
 
 class DecoratorPassTest extends TestCase
 {
@@ -522,5 +526,190 @@ class DecoratorPassTest extends TestCase
         $this->expectExceptionMessage('Only one tag decorator-1 allowed on service bar and argument $baz');
 
         $this->compilerPass->process($container);
+    }
+
+    /**
+     * @test
+     */
+    public function decorator_class_must_be_defined_for_proxied_decorator(): void
+    {
+        $container = new ContainerBuilder();
+
+        $container->register('foo')
+            ->setAbstract(true)
+            ->addTag('decorator', [
+                'tag' => 'decorator-1',
+            ]);
+
+        $container->register('bar')
+            ->addTag('decorator-1', [
+                'proxy' => true,
+            ]);
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('Class must be defined on service foo when using proxied decorators');
+
+        $this->compilerPass->process($container);
+    }
+
+    /**
+     * @test
+     */
+    public function subject_class_must_be_defined_for_proxied_decorator(): void
+    {
+        $container = new ContainerBuilder();
+
+        $container->register('foo')
+            ->setClass(stdClass::class)
+            ->setAbstract(true)
+            ->addTag('decorator', [
+                'tag' => 'decorator-1',
+            ]);
+
+        $container->register('bar')
+            ->addTag('decorator-1', [
+                'proxy' => true,
+            ]);
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('Class must be defined on service bar when using proxied decorators');
+
+        $this->compilerPass->process($container);
+    }
+
+    /**
+     * @test
+     */
+    public function positional_argument_must_exist_for_proxied_decorator(): void
+    {
+        $container = new ContainerBuilder();
+
+        $container->register('foo')
+            ->setClass(stdClass::class)
+            ->setAbstract(true)
+            ->addTag('decorator', [
+                'tag' => 'decorator-1',
+            ]);
+
+        $container->register('bar')
+            ->setClass(stdClass::class)
+            ->addTag('decorator-1', [
+                'proxy' => true,
+            ]);
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('Argument 0 not found on service foo (class stdClass)');
+
+        $this->compilerPass->process($container);
+    }
+
+    /**
+     * @test
+     */
+    public function positional_argument_must_be_defined_for_proxied_decorator(): void
+    {
+        $container = new ContainerBuilder();
+
+        $container->register('foo')
+            ->setClass(stdClass::class)
+            ->setAbstract(true)
+            ->addTag('decorator', [
+                'tag'      => 'decorator-1',
+                'argument' => '$arg',
+            ]);
+
+        $container->register('bar')
+            ->setClass(stdClass::class)
+            ->addTag('decorator-1', [
+                'proxy' => true,
+            ]);
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('Argument $arg not found on service foo (class stdClass)');
+
+        $this->compilerPass->process($container);
+    }
+
+    /**
+     * @test
+     */
+    public function positional_argument_can_be_used_for_proxied_decorator(): void
+    {
+        $container = new ContainerBuilder();
+
+        $container->register('foo')
+            ->setClass(DecoratorCommand::class)
+            ->setAbstract(true)
+            ->addTag('decorator', [
+                'tag' => 'decorator-1',
+            ]);
+
+        $container->register('bar')
+            ->setClass(ConcreteCommand::class)
+            ->addTag('decorator-1', [
+                'proxy' => true,
+            ]);
+
+        $this->compilerPass->process($container);
+
+        self::assertThat(
+            $container,
+            new ProxiedDecoratorExistsFor(
+                'bar',
+                'decorator-1',
+                'foo',
+                'Zlikavac32\NSBDecorators\Proxy\Generated'.
+                    '_'.
+                    '5a6c696b6176616333325c53796d666f6e794578747261735c54657374735c46697874757265735c4465636f7261746f72436f6d6d616e64'.
+                    '_'.
+                    '5a6c696b6176616333325c53796d666f6e794578747261735c54657374735c46697874757265735c436f6e6372657465436f6d6d616e64'.
+                    '_'.
+                    '636f6d6d616e64',
+                0,
+                0
+            )
+        );
+    }
+
+    /**
+     * @test
+     */
+    public function named_argument_can_be_used_for_proxied_decorator(): void
+    {
+        $container = new ContainerBuilder();
+
+        $container->register('foo')
+            ->setClass(DecoratorCommand::class)
+            ->setAbstract(true)
+            ->addTag('decorator', [
+                'tag'      => 'decorator-1',
+                'argument' => '$command',
+            ]);
+
+        $container->register('bar')
+            ->setClass(ConcreteCommand::class)
+            ->addTag('decorator-1', [
+                'proxy' => true,
+            ]);
+
+        $this->compilerPass->process($container);
+
+        self::assertThat(
+            $container,
+            new ProxiedDecoratorExistsFor(
+                'bar',
+                'decorator-1',
+                'foo',
+                'Zlikavac32\NSBDecorators\Proxy\Generated'.
+                    '_'.
+                    '5a6c696b6176616333325c53796d666f6e794578747261735c54657374735c46697874757265735c4465636f7261746f72436f6d6d616e64'.
+                    '_'.
+                    '5a6c696b6176616333325c53796d666f6e794578747261735c54657374735c46697874757265735c436f6e6372657465436f6d6d616e64'.
+                    '_'.
+                    '636f6d6d616e64',
+                '$command',
+                0
+            )
+        );
     }
 }
