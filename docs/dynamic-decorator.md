@@ -142,3 +142,9 @@ Do keep note on the compiler pass order. Due to the nature how compiler passes w
 Passing tags is useful when combined with the `\Zlikavac32\SymfonyExtras\DependencyInjection\Compiler\ServiceLinkerPass` to link various services from templates.
 
 Check [linker.md](linker.md) and [../examples/dynamic_decorator/linker.php](../examples/dynamic_decorator/linker.php) for more info.
+
+## Decorator proxy
+
+By adding property `proxy: true` to the template decorator tag, decorator will be proxied so that it implements all of the additional interfaces that decorated service implements. Missing methods will just proxy to the decorated service.
+
+For more info check [https://github.com/zlikavac32/nsb-decorators](https://github.com/zlikavac32/nsb-decorators)
