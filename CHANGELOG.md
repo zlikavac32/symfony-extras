@@ -1,6 +1,6 @@
 # Symfony extras changelog
 
-## Unreleased
+## 0.2.0 (2019-04-25)
 
 * **[NEW]** Support for [zlikavac32/nsb-decorators](https://github.com/zlikavac32/nsb-decorators)
 
