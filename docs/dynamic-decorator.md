@@ -147,4 +147,6 @@ Check [linker.md](linker.md) and [../examples/dynamic_decorator/linker.php](../e
 
 By adding property `proxy: true` to the template decorator tag, decorator will be proxied so that it implements all of the additional interfaces that decorated service implements. Missing methods will just proxy to the decorated service.
 
+To use decorator proxy, container requires must not be inlined (`container.dumper.inline_class_loader` parameter must not exist or be set to `false`).
+
 For more info check [https://github.com/zlikavac32/nsb-decorators](https://github.com/zlikavac32/nsb-decorators)
