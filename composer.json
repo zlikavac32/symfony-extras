@@ -35,7 +35,7 @@
         "zlikavac32/nsb-decorators": "To use decorator proxies"
     },
     "require": {
-        "php": "^7.2"
+        "php": "^7.4"
     },
     "require-dev": {
         "symfony/console": "^4.2",

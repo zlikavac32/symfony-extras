@@ -17,10 +17,7 @@ use Zlikavac32\SymfonyExtras\TestHelper\PHPUnit\Constraint\MethodCallExistsFor;
 class EventDispatcherPassTest extends TestCase
 {
 
-    /**
-     * @var EventDispatcherPass
-     */
-    private $compilerPass;
+    private ?EventDispatcherPass $compilerPass;
 
     protected function setUp(): void
     {
@@ -29,7 +26,7 @@ class EventDispatcherPassTest extends TestCase
 
     protected function tearDown(): void
     {
-        unset($this->compilerPass);
+        $this->compilerPass = null;
     }
 
     /**

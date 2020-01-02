@@ -20,10 +20,7 @@ use Zlikavac32\SymfonyExtras\Tests\Fixtures\DecoratorCommand;
 class DecoratorPassTest extends TestCase
 {
 
-    /**
-     * @var DecoratorPass
-     */
-    private $compilerPass;
+    private ?DecoratorPass $compilerPass;
 
     protected function setUp(): void
     {
@@ -32,7 +29,7 @@ class DecoratorPassTest extends TestCase
 
     protected function tearDown(): void
     {
-        unset($this->compilerPass);
+        $this->compilerPass = null;
     }
 
     /**

@@ -9,10 +9,7 @@ use PHPUnit\Framework\Constraint\Constraint;
 class KeyAppearsBeforeOtherKey extends Constraint
 {
 
-    /**
-     * @var string
-     */
-    private $message = null;
+    private ?string $message = null;
     private $firstKey;
     private $secondKey;
 

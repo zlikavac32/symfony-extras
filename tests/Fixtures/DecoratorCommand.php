@@ -7,10 +7,7 @@ namespace Zlikavac32\SymfonyExtras\Tests\Fixtures;
 class DecoratorCommand implements Command
 {
 
-    /**
-     * @var Command
-     */
-    private $command;
+    private Command $command;
 
     public function __construct(Command $command)
     {

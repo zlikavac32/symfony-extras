@@ -13,10 +13,7 @@ use Zlikavac32\SymfonyExtras\DependencyInjection\Compiler\ServiceLinkerPass;
 class ServiceLinkerPassTest extends TestCase
 {
 
-    /**
-     * @var ServiceLinkerPass
-     */
-    private $compilerPass;
+    private ?ServiceLinkerPass $compilerPass;
 
     protected function setUp(): void
     {
@@ -25,7 +22,7 @@ class ServiceLinkerPassTest extends TestCase
 
     protected function tearDown(): void
     {
-        unset($this->compilerPass);
+        $this->compilerPass = null;
     }
 
     /**

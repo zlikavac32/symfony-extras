@@ -36,10 +36,7 @@ class BarLogger implements Logger
 class Service
 {
 
-    /**
-     * @var Logger
-     */
-    private $logger;
+    private Logger $logger;
 
     public function __construct(Logger $logger)
     {

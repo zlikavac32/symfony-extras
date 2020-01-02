@@ -27,26 +27,23 @@ use function Zlikavac32\SymfonyExtras\DependencyInjection\processedItemsSetFromC
 class DynamicCompositePass implements CompilerPassInterface
 {
 
+    private string $tag;
     /**
-     * @var string
+     * @var CompositeMethodArgumentResolver[]
      */
-    private $tag;
+    private ?Map $argumentResolvers;
     /**
-     * @var Map|CompositeMethodArgumentResolver[]
+     * @var string[]
      */
-    private $argumentResolvers;
+    private ?Map $processedTags;
     /**
-     * @var Map|string[]
+     * @var string[]
      */
-    private $processedTags;
+    private ?Set $globallyProcessedTags;
     /**
-     * @var Set|string[]
+     * @var Set[]|string[][]
      */
-    private $globallyProcessedTags;
-    /**
-     * @var Map|Set[]|string[][]
-     */
-    private $tagToServicesMap;
+    private ?Map $tagToServicesMap;
 
     public function __construct(string $tag = 'dynamic_composite', ?Map $argumentResolvers = null)
     {

@@ -19,10 +19,7 @@ interface Service
 class ConcreteService implements Service
 {
 
-    /**
-     * @var string
-     */
-    private $name;
+    private string $name;
 
     public function __construct(string $name)
     {
@@ -37,10 +34,7 @@ class ConcreteService implements Service
 
 class WrappedService {
 
-    /**
-     * @var Service
-     */
-    private $service;
+    private Service $service;
 
     public function __construct(Service $service)
     {
@@ -58,10 +52,7 @@ class WrappedService {
 abstract class Decorator implements Service
 {
 
-    /**
-     * @var Service
-     */
-    private $service;
+    private Service $service;
 
     public function __construct(Service $service)
     {

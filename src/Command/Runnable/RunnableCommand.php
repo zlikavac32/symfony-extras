@@ -11,10 +11,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 class RunnableCommand extends Command
 {
 
-    /**
-     * @var Runnable
-     */
-    private $runnable;
+    private Runnable $runnable;
 
     public function __construct(Runnable $runnable, string $name)
     {

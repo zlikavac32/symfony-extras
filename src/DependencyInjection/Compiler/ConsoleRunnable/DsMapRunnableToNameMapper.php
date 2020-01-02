@@ -14,10 +14,7 @@ use LogicException;
 abstract class DsMapRunnableToNameMapper implements RunnableToNameMapper
 {
 
-    /**
-     * @var Map
-     */
-    private $map;
+    private Map $map;
 
     /**
      * @param Map|string[] $map
