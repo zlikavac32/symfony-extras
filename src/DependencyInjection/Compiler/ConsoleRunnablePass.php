@@ -36,11 +36,9 @@ class ConsoleRunnablePass implements CompilerPassInterface
     /**
      * @var RunnableToNameMapper[]
      */
-    private $mappers;
-    /**
-     * @var string
-     */
-    private $tag;
+    private array $mappers = [];
+
+    private string $tag;
 
     public function __construct(string $tag = 'console_runnable')
     {
@@ -74,7 +72,7 @@ class ConsoleRunnablePass implements CompilerPassInterface
                 $runnableDefinitions->add($serviceId);
             }
         } finally {
-            $this->mappers = null;
+            $this->mappers = [];
         }
     }
 

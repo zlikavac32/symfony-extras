@@ -10,26 +10,15 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 class MethodCallExistsFor extends Constraint
 {
 
-    /**
-     * @var string
-     */
-    private $message = null;
-    /**
-     * @var string
-     */
-    private $serviceId;
-    /**
-     * @var string
-     */
-    private $expectedMethod;
-    /**
-     * @var array
-     */
-    private $expectedArguments;
-    /**
-     * @var int|null
-     */
-    private $positionOfTheCall;
+    private ?string $message = null;
+
+    private string $serviceId;
+
+    private string $expectedMethod;
+
+    private array $expectedArguments;
+
+    private int $positionOfTheCall;
 
     public function __construct(
         string $serviceId,

@@ -37,10 +37,7 @@ class ConcreteCommand implements CommandWithHelp
 class DecoratorCommand implements Command
 {
 
-    /**
-     * @var Command
-     */
-    private $command;
+    private Command $command;
 
     public function __construct(Command $command)
     {

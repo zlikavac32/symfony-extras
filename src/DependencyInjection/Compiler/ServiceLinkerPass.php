@@ -32,22 +32,19 @@ use function Zlikavac32\SymfonyExtras\DependencyInjection\processedItemsSetFromC
 class ServiceLinkerPass implements CompilerPassInterface
 {
 
+    private string $tag;
     /**
-     * @var string
+     * @var Map[]|Reference[][]
      */
-    private $tag;
+    private ?Map $providers;
     /**
-     * @var Map|Map[]|Reference[][]
+     * @var Set[]|string[][]
      */
-    private $providers;
+    private ?Map $tagToServicesMap;
     /**
-     * @var Map|Set[]|string[][]
+     * @var ProcessedArgument[]
      */
-    private $tagToServicesMap;
-    /**
-     * @var Set|ProcessedArgument[]
-     */
-    private $processedArguments;
+    private ?Set $processedArguments;
 
     public function __construct(string $tag = 'linker')
     {

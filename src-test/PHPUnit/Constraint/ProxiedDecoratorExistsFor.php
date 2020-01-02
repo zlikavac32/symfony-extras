@@ -9,22 +9,13 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 class ProxiedDecoratorExistsFor extends DecoratorExistsFor
 {
 
-    /**
-     * @var string
-     */
-    private $message = null;
-    /**
-     * @var string
-     */
-    private $serviceId;
-    /**
-     * @var string
-     */
-    private $proxyFqn;
-    /**
-     * @var string
-     */
-    private $decoratorServiceId;
+    private ?string $message = null;
+
+    private string $serviceId;
+
+    private string $proxyFqn;
+
+    private string $decoratorServiceId;
 
     public function __construct(
         string $serviceId,

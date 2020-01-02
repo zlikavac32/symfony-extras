@@ -35,22 +35,19 @@ use function Zlikavac32\SymfonyExtras\DependencyInjection\reconstructTags;
 class DecoratorPass implements CompilerPassInterface
 {
 
+    private string $tag;
     /**
-     * @var string
+     * @var Set[]|string[][]
      */
-    private $tag;
+    private ?Map $tagToServicesMap;
     /**
-     * @var Map|Set[]|string[][]
+     * @var DecoratorDefinition[]
      */
-    private $tagToServicesMap;
+    private ?Map $decoratorDefinitions;
     /**
-     * @var Map|DecoratorDefinition[]
+     * @var TagReference[]
      */
-    private $decoratorDefinitions;
-    /**
-     * @var Set|TagReference[]
-     */
-    private $processedTags;
+    private ?Set $processedTags;
 
     public function __construct(string $tag = 'decorator')
     {

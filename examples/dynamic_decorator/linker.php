@@ -18,10 +18,7 @@ interface Service
 class ConcreteService implements Service
 {
 
-    /**
-     * @var string
-     */
-    private $name;
+    private string $name;
 
     public function __construct(string $name)
     {

@@ -12,18 +12,11 @@ use Zlikavac32\SymfonyExtras\Command\Runnable\RunnableCommand;
 class CommandRegisteredForRunnable extends Constraint
 {
 
-    /**
-     * @var string
-     */
-    private $runnableService;
-    /**
-     * @var string
-     */
-    private $expectedName;
-    /**
-     * @var string
-     */
-    private $message = null;
+    private string $runnableService;
+
+    private string $expectedName;
+
+    private ?string $message = null;
 
     public function __construct(string $runnableService, string $expectedName)
     {

@@ -16,10 +16,7 @@ use Zlikavac32\SymfonyExtras\TestHelper\PHPUnit\Constraint\MethodCallExistsFor;
 class DynamicCompositePassTest extends TestCase
 {
 
-    /**
-     * @var DynamicCompositePass
-     */
-    private $compilerPass;
+    private ?DynamicCompositePass $compilerPass;
 
     protected function setUp(): void
     {
@@ -28,7 +25,7 @@ class DynamicCompositePassTest extends TestCase
 
     protected function tearDown(): void
     {
-        unset($this->compilerPass);
+        $this->compilerPass = null;
     }
 
     /**

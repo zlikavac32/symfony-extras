@@ -22,10 +22,7 @@ require_once __DIR__ . '/common.php';
 class FooRunnable implements HelperSetAwareRunnable, RunnableWithDescription, RunnableWithHelp
 {
 
-    /**
-     * @var HelperSet
-     */
-    private $helperSet;
+    private HelperSet $helperSet;
 
     public function configure(InputDefinition $inputDefinition): void
     {

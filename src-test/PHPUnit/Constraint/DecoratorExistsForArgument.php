@@ -10,15 +10,10 @@ use Symfony\Component\DependencyInjection\Reference;
 class DecoratorExistsForArgument extends DecoratorExistsFor
 {
 
-    /**
-     * @var string
-     */
-    private $message = null;
+    private ?string $message = null;
     private $serviceArgument;
-    /**
-     * @var string
-     */
-    private $serviceId;
+
+    private string $serviceId;
 
     public function __construct(
         string $serviceId,

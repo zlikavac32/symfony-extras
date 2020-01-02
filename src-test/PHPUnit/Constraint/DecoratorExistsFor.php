@@ -12,27 +12,17 @@ use Symfony\Component\DependencyInjection\Reference;
 class DecoratorExistsFor extends Constraint
 {
 
-    /**
-     * @var string
-     */
-    private $message = null;
-    /**
-     * @var string
-     */
-    private $serviceId;
-    /**
-     * @var string
-     */
-    private $decoratorServiceId;
+
+    private ?string $message = null;
+
+    private string $serviceId;
+
+    private string $decoratorServiceId;
     private $decoratorArgument;
-    /**
-     * @var int
-     */
-    private $priority;
-    /**
-     * @var string
-     */
-    private $decoratorTemplateId;
+
+    private int $priority;
+
+    private string $decoratorTemplateId;
 
     public function __construct(
         string $serviceId,

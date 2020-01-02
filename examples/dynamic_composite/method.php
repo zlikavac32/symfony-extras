@@ -13,10 +13,7 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 class MethodCompositeService
 {
 
-    /**
-     * @var array
-     */
-    private $services = [];
+    private array $services = [];
 
     public function add($service)
     {
@@ -32,10 +29,7 @@ class MethodCompositeService
 class CustomArgumentMethodCompositeService
 {
 
-    /**
-     * @var array
-     */
-    private $services = [];
+    private array $services = [];
 
     public function add(int $priority, $service)
     {

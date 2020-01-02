@@ -18,10 +18,7 @@ use function Zlikavac32\SymfonyExtras\DependencyInjection\processedItemsSetFromC
 class EventDispatcherPass implements CompilerPassInterface
 {
 
-    /**
-     * @var string
-     */
-    private $tag;
+    private string $tag;
 
     public function __construct(string $tag = 'event_dispatcher')
     {

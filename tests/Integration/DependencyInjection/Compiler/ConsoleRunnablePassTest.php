@@ -14,10 +14,7 @@ use Zlikavac32\SymfonyExtras\TestHelper\PHPUnit\Constraint\CommandRegisteredForR
 class ConsoleRunnablePassTest extends TestCase
 {
 
-    /**
-     * @var ConsoleRunnablePass
-     */
-    private $compilerPass;
+    private ?ConsoleRunnablePass $compilerPass;
 
     protected function setUp(): void
     {
@@ -26,7 +23,7 @@ class ConsoleRunnablePassTest extends TestCase
 
     protected function tearDown(): void
     {
-        unset($this->compilerPass);
+        $this->compilerPass = null;
     }
 
     /**

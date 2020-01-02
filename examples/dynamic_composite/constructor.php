@@ -11,10 +11,7 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 class ConstructorCompositeService
 {
 
-    /**
-     * @var array
-     */
-    private $services;
+    private array $services;
 
     public function __construct(array $services)
     {
@@ -30,10 +27,7 @@ class ConstructorCompositeService
 class VariadicConstructorCompositeService
 {
 
-    /**
-     * @var array
-     */
-    private $services;
+    private array $services;
 
     public function __construct(...$services)
     {
